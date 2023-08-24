@@ -1,2 +1,2 @@
-export { default as ReactNativeVideoPlayerView } from './ReactNativeVideoPlayerViewNativeComponent';
+export { default as VideoPlayer } from './ReactNativeVideoPlayerViewNativeComponent';
 export * from './ReactNativeVideoPlayerViewNativeComponent';

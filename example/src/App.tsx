@@ -1,12 +1,17 @@
 import * as React from 'react';
 
 import { StyleSheet, View } from 'react-native';
-import { ReactNativeVideoPlayerView } from '@fugood/react-native-video-player';
+import { VideoPlayer } from '@fugood/react-native-video-player';
 
 export default function App() {
   return (
     <View style={styles.container}>
-      <ReactNativeVideoPlayerView color="#32a852" style={styles.box} />
+      <VideoPlayer
+        url="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        style={styles.box}
+        loop={true}
+        resizeMode="cover"
+      />
     </View>
   );
 }
@@ -18,8 +23,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   box: {
-    width: 60,
-    height: 60,
+    width: 200,
+    height: 200,
     marginVertical: 20,
   },
 });

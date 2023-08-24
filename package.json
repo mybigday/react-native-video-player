@@ -43,13 +43,13 @@
     "ios",
     "android"
   ],
-  "repository": "https://github.com/mybigday//fugood-react-native-video-player",
+  "repository": "https://github.com/mybigday/react-native-video-player",
   "author": "Hans <hans.chen@bricks.tools> (https://github.com/mybigday/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mybigday//fugood-react-native-video-player/issues"
+    "url": "https://github.com/mybigday/react-native-video-player/issues"
   },
-  "homepage": "https://github.com/mybigday//fugood-react-native-video-player#readme",
+  "homepage": "https://github.com/mybigday/react-native-video-player#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
