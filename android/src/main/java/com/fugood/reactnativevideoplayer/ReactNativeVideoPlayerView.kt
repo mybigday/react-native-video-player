@@ -66,6 +66,9 @@ class ReactNativeVideoPlayerView : SurfaceView,
 
   override fun surfaceDestroyed(holder: SurfaceHolder) {
     player?.setDisplay(null)
+    player?.release()
+    player = null
+    isReady = false
   }
 
   fun play(url: String?) {

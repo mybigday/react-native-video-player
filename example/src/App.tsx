@@ -6,12 +6,14 @@ import { VideoPlayer } from '@fugood/react-native-video-player';
 export default function App() {
   return (
     <View style={styles.container}>
-      <VideoPlayer
-        url="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        style={styles.box}
-        loop={true}
-        resizeMode="cover"
-      />
+      {new Array(5).fill(0).map((_, i) => (
+        <VideoPlayer
+          key={i}
+          url="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          style={styles.box}
+          loop={true}
+        />
+      ))}
     </View>
   );
 }
@@ -25,6 +27,5 @@ const styles = StyleSheet.create({
   box: {
     width: 200,
     height: 200,
-    marginVertical: 20,
   },
 });
