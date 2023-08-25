@@ -47,6 +47,11 @@ class ReactNativeVideoPlayerViewManager :
     view?.setResizeMode(value)
   }
 
+  @ReactProp(name = "speed")
+  override fun setSpeed(view: ReactNativeVideoPlayerView?, value: Float) {
+    view?.setSpeed(value)
+  }
+
   @ReactProp(name = "progressUpdateInterval")
   override fun setProgressUpdateInterval(view: ReactNativeVideoPlayerView?, value: Int?) {
     view?.setProgressUpdateInterval(value)

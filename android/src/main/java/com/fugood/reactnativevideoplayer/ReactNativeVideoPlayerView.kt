@@ -3,6 +3,7 @@ package com.fugood.reactnativevideoplayer
 import android.content.Context
 import android.util.AttributeSet
 import android.media.MediaPlayer
+import android.media.PlaybackParams
 import android.media.MediaPlayer.OnPreparedListener
 import android.media.MediaPlayer.OnCompletionListener
 import android.media.MediaPlayer.OnErrorListener
@@ -33,6 +34,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   protected var mSeekTo = 0
   protected var mLoop = false
   protected var mProgressUpdateInterval = 250
+  protected val mPlaybackParams = PlaybackParams()
 
   protected val container = AspectFrameLayout(context)
   protected val surface = SurfaceView(context)
@@ -81,19 +83,20 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     post {
       if (player == null) {
         player = MediaPlayer()
-        player?.setDisplay(surface.holder)
+        player!!.setDisplay(surface.holder)
+      } else {
+        player!!.reset()
       }
-      player?.reset()
       if (url?.isEmpty() == false) {
-        player?.setDataSource(url)
-        player?.setScreenOnWhilePlaying(true)
-        player?.prepareAsync()
-        player?.setOnPreparedListener(this)
-        player?.setOnCompletionListener(this)
-        player?.setOnErrorListener(this)
-        player?.setOnInfoListener(this)
-        player?.setOnSeekCompleteListener(this)
-        player?.setOnVideoSizeChangedListener(this)
+        player!!.setDataSource(url)
+        player!!.setScreenOnWhilePlaying(true)
+        player!!.prepareAsync()
+        player!!.setOnPreparedListener(this)
+        player!!.setOnCompletionListener(this)
+        player!!.setOnErrorListener(this)
+        player!!.setOnInfoListener(this)
+        player!!.setOnSeekCompleteListener(this)
+        player!!.setOnVideoSizeChangedListener(this)
       }
     }
   }
@@ -169,6 +172,16 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     container.resizeMode = resizeMode
   }
 
+  fun setSpeed(speed: Float) {
+    mPlaybackParams.speed = speed
+    if (!isReady) {
+      return
+    }
+    post {
+      player?.setPlaybackParams(mPlaybackParams)
+    }
+  }
+
   fun setProgressUpdateInterval(interval: Int?) {
     mProgressUpdateInterval = interval ?: 0
     setupProgressUptateTimer()
@@ -181,14 +194,18 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   override fun onPrepared(mp: MediaPlayer?) {
-    player?.setLooping(mLoop)
-    player?.setVolume(mVolume, mVolume)
+    if (mp == null) {
+      return
+    }
+    mp.setPlaybackParams(mPlaybackParams)
+    mp.setLooping(mLoop)
+    mp.setVolume(mVolume, mVolume)
     if (mSeekTo > 0) {
-      mp?.seekTo(mSeekTo)
+      mp.seekTo(mSeekTo)
     }
     fireEvent("ready", null)
     if (!mPaused) {
-      mp?.start()
+      mp.start()
     }
   }
 

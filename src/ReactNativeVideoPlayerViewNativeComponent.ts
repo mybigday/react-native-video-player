@@ -21,6 +21,7 @@ interface NativeProps extends ViewProps {
   paused?: boolean;
   volume?: number;
   resizeMode?: 'contain' | 'cover' | 'stretch';
+  speed?: number;
   progressUpdateInterval?: number;
 
   onSeekTo?: DirectEventHandler<ProgressEvent>;
