@@ -12,6 +12,7 @@ import android.media.MediaPlayer.OnVideoSizeChangedListener
 import android.view.SurfaceView
 import android.view.SurfaceHolder
 import android.view.View.MeasureSpec
+import android.widget.FrameLayout
 import android.net.Uri
 import android.util.Log
 
@@ -23,43 +24,42 @@ import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.uimanager.UIManagerModule
 
-class ReactNativeVideoPlayerView : SurfaceView,
-  OnPreparedListener, OnCompletionListener, OnErrorListener, OnInfoListener, OnSeekCompleteListener, OnVideoSizeChangedListener,
-  SurfaceHolder.Callback {
+class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
+  OnPreparedListener, OnCompletionListener, OnErrorListener, OnInfoListener, OnSeekCompleteListener, OnVideoSizeChangedListener {
+
   protected var mUrl: String? = null
-  protected var mResizeMode = "contain"
   protected var mVolume = 1.0f
   protected var mPaused = false
   protected var mSeekTo = 0
   protected var mLoop = false
   protected var mProgressUpdateInterval = 250
 
+  protected val container = AspectFrameLayout(context)
+  protected val surface = SurfaceView(context)
   protected var player: MediaPlayer? = null
   protected var progressTimer: Timer? = null
   protected var isReady = false
 
-  constructor(context: Context?) : super(context) {
-    init()
-  }
-  constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs) {
-    init()
-  }
-  constructor(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) : super(
+  constructor(context: Context) : this(context, null)
+  constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
+  constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(
     context,
     attrs,
     defStyleAttr
   ) {
-    init()
-  }
+    val params = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+    val aspectParams = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+    aspectParams.gravity = android.view.Gravity.CENTER
 
-  private fun init() {
-    holder.addCallback(this)
-    player = MediaPlayer()
+    surface.layoutParams = params
+    surface.holder.addCallback(this)
+    container.addView(surface, 0, params)
+    container.layoutParams = aspectParams
+    addViewInLayout(container, 0, aspectParams)
   }
 
   override fun surfaceCreated(holder: SurfaceHolder) {
     isReady = true
-    player?.setDisplay(holder)
     play(mUrl)
     setupProgressUptateTimer()
   }
@@ -69,7 +69,6 @@ class ReactNativeVideoPlayerView : SurfaceView,
 
   override fun surfaceDestroyed(holder: SurfaceHolder) {
     progressTimer?.cancel()
-    player?.setDisplay(null)
     player?.release()
     player = null
     isReady = false
@@ -80,9 +79,14 @@ class ReactNativeVideoPlayerView : SurfaceView,
       return
     }
     post {
+      if (player == null) {
+        player = MediaPlayer()
+        player?.setDisplay(surface.holder)
+      }
       player?.reset()
       if (url?.isEmpty() == false) {
         player?.setDataSource(url)
+        player?.setScreenOnWhilePlaying(true)
         player?.prepareAsync()
         player?.setOnPreparedListener(this)
         player?.setOnCompletionListener(this)
@@ -161,48 +165,13 @@ class ReactNativeVideoPlayerView : SurfaceView,
   }
 
   fun setResizeMode(mode: String?) {
-    mResizeMode = mode ?: "contain"
-    updateLayout()
+    var resizeMode = enumValueOf<AspectFrameLayout.ResizeMode>(mode ?: "stretch")
+    container.resizeMode = resizeMode
   }
 
   fun setProgressUpdateInterval(interval: Int?) {
     mProgressUpdateInterval = interval ?: 0
     setupProgressUptateTimer()
-  }
-
-  fun updateLayout() {
-    val videoWidth = player?.videoWidth ?: 1
-    val videoHeight = player?.videoHeight ?: 1
-    val width = measuredWidth
-    val height = measuredHeight
-    val params = layoutParams
-    val videoProportion = videoWidth.toFloat() / videoHeight.toFloat()
-    val viewProportion = width.toFloat() / height.toFloat()
-    when (mResizeMode) {
-      "cover" -> {
-        if (videoProportion > viewProportion) {
-          params.height = height
-          params.width = (height * videoProportion).toInt()
-        } else {
-          params.width = width
-          params.height = (width / videoProportion).toInt()
-        }
-      }
-      "contain" -> {
-        if (videoProportion > viewProportion) {
-          params.width = width
-          params.height = (width / videoProportion).toInt()
-        } else {
-          params.height = height
-          params.width = (height * videoProportion).toInt()
-        }
-      }
-      else -> {
-        params.width = width
-        params.height = height
-      }
-    }
-    layoutParams = params
   }
 
   private fun fireEvent(name: String, event: WritableMap?) {
@@ -232,7 +201,7 @@ class ReactNativeVideoPlayerView : SurfaceView,
     if (what == MediaPlayer.MEDIA_ERROR_SERVER_DIED) {
       player?.release()
       player = MediaPlayer()
-      player?.setDisplay(holder)
+      player?.setDisplay(surface.holder)
       play(mUrl)
       return true
     } else {
@@ -288,12 +257,6 @@ class ReactNativeVideoPlayerView : SurfaceView,
     return false
   }
 
-  override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-    val width = MeasureSpec.getSize(widthMeasureSpec)
-    val height = MeasureSpec.getSize(heightMeasureSpec)
-    setMeasuredDimension(width, height)
-  }
-
   override fun onSeekComplete(mp: MediaPlayer?) {
     fireEvent("seekTo", Arguments.createMap().apply {
       putInt("position", mp?.currentPosition ?: 0)
@@ -301,7 +264,8 @@ class ReactNativeVideoPlayerView : SurfaceView,
   }
 
   override fun onVideoSizeChanged(mp: MediaPlayer?, width: Int, height: Int) {
-    updateLayout()
+    Log.d("VideoPlayer", "onVideoSizeChanged: $width, $height")
+    container.aspectRatio = width.toFloat() / height.toFloat()
     fireEvent("videoSize", Arguments.createMap().apply {
       putInt("width", width)
       putInt("height", height)
