@@ -21,7 +21,7 @@ import java.util.TimerTask
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.ReactContext
-import com.facebook.react.uimanager.events.RCTEventEmitter
+import com.facebook.react.uimanager.UIManagerModule
 
 class ReactNativeVideoPlayerView : SurfaceView,
   OnPreparedListener, OnCompletionListener, OnErrorListener, OnInfoListener, OnSeekCompleteListener, OnVideoSizeChangedListener,
@@ -61,75 +61,44 @@ class ReactNativeVideoPlayerView : SurfaceView,
     isReady = true
     player?.setDisplay(holder)
     play(mUrl)
+    setupProgressUptateTimer()
   }
 
   override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
   }
 
   override fun surfaceDestroyed(holder: SurfaceHolder) {
+    progressTimer?.cancel()
     player?.setDisplay(null)
     player?.release()
     player = null
     isReady = false
   }
 
-  fun play(url: String?) {
+  protected fun play(url: String?) {
     if (!isReady) {
       return
     }
-    player?.reset()
-    if (url == null || url.isEmpty()) {
+    post {
+      player?.reset()
+      if (url?.isEmpty() == false) {
+        player?.setDataSource(url)
+        player?.prepareAsync()
+        player?.setOnPreparedListener(this)
+        player?.setOnCompletionListener(this)
+        player?.setOnErrorListener(this)
+        player?.setOnInfoListener(this)
+        player?.setOnSeekCompleteListener(this)
+        player?.setOnVideoSizeChangedListener(this)
+      }
+    }
+  }
+
+  protected fun setupProgressUptateTimer() {
+    progressTimer?.cancel()
+    if (mProgressUpdateInterval <= 0) {
       return
     }
-    player?.setDataSource(url)
-    player?.prepareAsync()
-    player?.setOnPreparedListener(this)
-    player?.setOnCompletionListener(this)
-    player?.setOnErrorListener(this)
-    player?.setOnInfoListener(this)
-    player?.setOnSeekCompleteListener(this)
-    player?.setOnVideoSizeChangedListener(this)
-  }
-
-  fun setUrl(url: String?) {
-    mUrl = url
-    play(mUrl)
-  }
-
-  fun setLoop(loop: Boolean) {
-    mLoop = loop
-    player?.setLooping(mLoop)
-  }
-
-  fun setVolume(volume: Float) {
-    mVolume = volume
-    player?.setVolume(mVolume, mVolume)
-  }
-
-  fun setPaused(paused: Boolean) {
-    mPaused = paused
-    if (mPaused) {
-      player?.pause()
-    } else {
-      player?.start()
-    }
-  }
-
-  fun setSeekTo(seekTo: Int) {
-    mSeekTo = seekTo
-    if (mSeekTo != player?.currentPosition) {
-      player?.seekTo(mSeekTo)
-    }
-  }
-
-  fun setResizeMode(mode: String?) {
-    mResizeMode = mode ?: "contain"
-    requestLayout()
-  }
-
-  fun setProgressUpdateInterval(interval: Int?) {
-    mProgressUpdateInterval = interval ?: 250
-    progressTimer?.cancel()
     progressTimer = Timer()
     progressTimer?.scheduleAtFixedRate(object : TimerTask() {
       override fun run() {
@@ -142,38 +111,104 @@ class ReactNativeVideoPlayerView : SurfaceView,
     }, 0, mProgressUpdateInterval.toLong())
   }
 
-  override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-    val width = MeasureSpec.getSize(widthMeasureSpec)
-    val height = MeasureSpec.getSize(heightMeasureSpec)
-    val videoWidth = player?.videoWidth ?: 0
-    val videoHeight = player?.videoHeight ?: 0
+  fun setUrl(url: String?) {
+    mUrl = url
+    play(mUrl)
+  }
+
+  fun setLoop(loop: Boolean) {
+    mLoop = loop
+    if (!isReady) {
+      return
+    }
+    post {
+      player?.setLooping(mLoop)
+    }
+  }
+
+  fun setVolume(volume: Float) {
+    mVolume = volume
+    if (!isReady) {
+      return
+    }
+    post {
+      player?.setVolume(mVolume, mVolume)
+    }
+  }
+
+  fun setPaused(paused: Boolean) {
+    mPaused = paused
+    if (!isReady) {
+      return
+    }
+    post {
+      if (mPaused) {
+        player?.pause()
+      } else {
+        player?.start()
+      }
+    }
+  }
+
+  fun setSeekTo(seekTo: Int) {
+    mSeekTo = seekTo
+    if (!isReady) {
+      return
+    }
+    post {
+      player?.seekTo(mSeekTo)
+    }
+  }
+
+  fun setResizeMode(mode: String?) {
+    mResizeMode = mode ?: "contain"
+    updateLayout()
+  }
+
+  fun setProgressUpdateInterval(interval: Int?) {
+    mProgressUpdateInterval = interval ?: 0
+    setupProgressUptateTimer()
+  }
+
+  fun updateLayout() {
+    val videoWidth = player?.videoWidth ?: 1
+    val videoHeight = player?.videoHeight ?: 1
+    val width = measuredWidth
+    val height = measuredHeight
+    val params = layoutParams
     val videoProportion = videoWidth.toFloat() / videoHeight.toFloat()
     val viewProportion = width.toFloat() / height.toFloat()
     when (mResizeMode) {
       "cover" -> {
         if (videoProportion > viewProportion) {
-          setMeasuredDimension(width, (width / videoProportion).toInt())
+          params.height = height
+          params.width = (height * videoProportion).toInt()
         } else {
-          setMeasuredDimension((height * videoProportion).toInt(), height)
+          params.width = width
+          params.height = (width / videoProportion).toInt()
         }
       }
       "contain" -> {
         if (videoProportion > viewProportion) {
-          setMeasuredDimension((height * videoProportion).toInt(), height)
+          params.width = width
+          params.height = (width / videoProportion).toInt()
         } else {
-          setMeasuredDimension(width, (width / videoProportion).toInt())
+          params.height = height
+          params.width = (height * videoProportion).toInt()
         }
       }
       else -> {
-        setMeasuredDimension(width, height)
+        params.width = width
+        params.height = height
       }
     }
+    layoutParams = params
   }
 
   private fun fireEvent(name: String, event: WritableMap?) {
     (context as ReactContext)
-      .getJSModule(RCTEventEmitter::class.java)
-      .receiveEvent(id, name, event)
+      .getNativeModule(UIManagerModule::class.java)
+      ?.receiveEvent(id, name, event)
   }
 
   override fun onPrepared(mp: MediaPlayer?) {
@@ -193,47 +228,52 @@ class ReactNativeVideoPlayerView : SurfaceView,
   }
 
   override fun onError(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
-    when (what) {
-      MediaPlayer.MEDIA_ERROR_UNKNOWN -> {
-        fireEvent("error", Arguments.createMap().apply {
-          putString("message", "MEDIA_ERROR_UNKNOWN")
-        })
-      }
-      MediaPlayer.MEDIA_ERROR_SERVER_DIED -> {
-        fireEvent("error", Arguments.createMap().apply {
-          putString("message", "MEDIA_ERROR_SERVER_DIED")
-        })
-      }
-      MediaPlayer.MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK -> {
-        fireEvent("error", Arguments.createMap().apply {
-          putString("message", "MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK")
-        })
-      }
-      MediaPlayer.MEDIA_ERROR_IO -> {
-        fireEvent("error", Arguments.createMap().apply {
-          putString("message", "MEDIA_ERROR_IO")
-        })
-      }
-      MediaPlayer.MEDIA_ERROR_MALFORMED -> {
-        fireEvent("error", Arguments.createMap().apply {
-          putString("message", "MEDIA_ERROR_MALFORMED")
-        })
-      }
-      MediaPlayer.MEDIA_ERROR_UNSUPPORTED -> {
-        fireEvent("error", Arguments.createMap().apply {
-          putString("message", "MEDIA_ERROR_UNSUPPORTED")
-        })
-      }
-      MediaPlayer.MEDIA_ERROR_TIMED_OUT -> {
-        fireEvent("error", Arguments.createMap().apply {
-          putString("message", "MEDIA_ERROR_TIMED_OUT")
-        })
+    Log.d("VideoPlayer", "onError: $what, $extra")
+    if (what == MediaPlayer.MEDIA_ERROR_SERVER_DIED) {
+      player?.release()
+      player = MediaPlayer()
+      player?.setDisplay(holder)
+      play(mUrl)
+      return true
+    } else {
+      when (extra) {
+        MediaPlayer.MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK -> {
+          fireEvent("error", Arguments.createMap().apply {
+            putString("message", "MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK")
+          })
+        }
+        MediaPlayer.MEDIA_ERROR_IO -> {
+          fireEvent("error", Arguments.createMap().apply {
+            putString("message", "MEDIA_ERROR_IO")
+          })
+        }
+        MediaPlayer.MEDIA_ERROR_MALFORMED -> {
+          fireEvent("error", Arguments.createMap().apply {
+            putString("message", "MEDIA_ERROR_MALFORMED")
+          })
+        }
+        MediaPlayer.MEDIA_ERROR_UNSUPPORTED -> {
+          fireEvent("error", Arguments.createMap().apply {
+            putString("message", "MEDIA_ERROR_UNSUPPORTED")
+          })
+        }
+        MediaPlayer.MEDIA_ERROR_TIMED_OUT -> {
+          fireEvent("error", Arguments.createMap().apply {
+            putString("message", "MEDIA_ERROR_TIMED_OUT")
+          })
+        }
+        else -> {
+          fireEvent("error", Arguments.createMap().apply {
+            putString("message", "MEDIA_ERROR_UNKNOWN")
+          })
+        }
       }
     }
     return false
   }
 
   override fun onInfo(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
+    Log.d("VideoPlayer", "onInfo: $what, $extra")
     when (what) {
       MediaPlayer.MEDIA_INFO_BUFFERING_START -> {
         fireEvent("bufferingStart", null)
@@ -248,6 +288,12 @@ class ReactNativeVideoPlayerView : SurfaceView,
     return false
   }
 
+  override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+    val width = MeasureSpec.getSize(widthMeasureSpec)
+    val height = MeasureSpec.getSize(heightMeasureSpec)
+    setMeasuredDimension(width, height)
+  }
+
   override fun onSeekComplete(mp: MediaPlayer?) {
     fireEvent("seekTo", Arguments.createMap().apply {
       putInt("position", mp?.currentPosition ?: 0)
@@ -255,7 +301,7 @@ class ReactNativeVideoPlayerView : SurfaceView,
   }
 
   override fun onVideoSizeChanged(mp: MediaPlayer?, width: Int, height: Int) {
-    requestLayout()
+    updateLayout()
     fireEvent("videoSize", Arguments.createMap().apply {
       putInt("width", width)
       putInt("height", height)

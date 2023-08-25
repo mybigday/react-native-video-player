@@ -15,19 +15,29 @@ export default function App() {
 
   React.useEffect(() => {
     console.log(`[render] ${performance.now()}`);
+
+    return () => setNum(0);
   }, []);
+
+  const paused = React.useMemo(() => num < NUM, [num]);
 
   return (
     <View style={styles.container}>
-      {new Array(NUM).fill().map((_, i) => (
+      {new Array(NUM).fill(null).map((_, i) => (
         <VideoPlayer
           key={i}
-          url="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          url="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
           style={styles.box}
           onReady={ready}
-          onError={console.error}
+          progressUpdateInterval={10000}
+          onPlay={() => console.log(`[play-${i}] ${performance.now()}`)}
+          onProgress={({ nativeEvent: { position } }) =>
+            console.log(`[progress-${i}] ${position}`)
+          }
+          onEnd={() => console.log(`[end-${i}] ${performance.now()}`)}
+          onError={({ nativeEvent }) => console.error(nativeEvent)}
           loop
-          paused={num < NUM}
+          paused={paused}
         />
       ))}
     </View>
