@@ -54,10 +54,12 @@ class ReactNativeVideoPlayerView : SurfaceView,
 
   private fun init() {
     holder.addCallback(this)
+    player = MediaPlayer()
   }
 
   override fun surfaceCreated(holder: SurfaceHolder) {
     isReady = true
+    player?.setDisplay(holder)
     play(mUrl)
   }
 
@@ -75,19 +77,12 @@ class ReactNativeVideoPlayerView : SurfaceView,
     if (!isReady) {
       return
     }
+    player?.reset()
     if (url == null || url.isEmpty()) {
-      player?.reset()
       return
     }
-    Log.d("RNVP", "play: $url")
-    if (player == null) {
-      player = MediaPlayer.create(context, Uri.parse(url), holder)
-    } else {
-      player?.reset()
-      player?.setDisplay(holder)
-      player?.setDataSource(url)
-      player?.prepareAsync()
-    }
+    player?.setDataSource(url)
+    player?.prepareAsync()
     player?.setOnPreparedListener(this)
     player?.setOnCompletionListener(this)
     player?.setOnErrorListener(this)
@@ -148,7 +143,6 @@ class ReactNativeVideoPlayerView : SurfaceView,
   }
 
   override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-    Log.d("RNVP", "onMeasure: $mResizeMode")
     val width = MeasureSpec.getSize(widthMeasureSpec)
     val height = MeasureSpec.getSize(heightMeasureSpec)
     val videoWidth = player?.videoWidth ?: 0
@@ -177,14 +171,13 @@ class ReactNativeVideoPlayerView : SurfaceView,
   }
 
   private fun fireEvent(name: String, event: WritableMap?) {
-    Log.d("RNVP", "fireEvent: $name")
-    // (context as ReactContext)
-    //   .getJSModule(RCTEventEmitter::class.java)
-    //   .receiveEvent(id, name, event)
+    (context as ReactContext)
+      .getJSModule(RCTEventEmitter::class.java)
+      .receiveEvent(id, name, event)
   }
 
   override fun onPrepared(mp: MediaPlayer?) {
-    Log.d("RNVP", "onPrepared: $mSeekTo, $mPaused")
+    fireEvent("ready", null)
     player?.setLooping(mLoop)
     player?.setVolume(mVolume, mVolume)
     if (mSeekTo > 0) {
@@ -196,12 +189,10 @@ class ReactNativeVideoPlayerView : SurfaceView,
   }
 
   override fun onCompletion(mp: MediaPlayer?) {
-    Log.d("RNVP", "onCompletion")
     fireEvent("end", null)
   }
 
   override fun onError(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
-    Log.d("RNVP", "onError")
     when (what) {
       MediaPlayer.MEDIA_ERROR_UNKNOWN -> {
         fireEvent("error", Arguments.createMap().apply {
@@ -213,12 +204,36 @@ class ReactNativeVideoPlayerView : SurfaceView,
           putString("message", "MEDIA_ERROR_SERVER_DIED")
         })
       }
+      MediaPlayer.MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK -> {
+        fireEvent("error", Arguments.createMap().apply {
+          putString("message", "MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK")
+        })
+      }
+      MediaPlayer.MEDIA_ERROR_IO -> {
+        fireEvent("error", Arguments.createMap().apply {
+          putString("message", "MEDIA_ERROR_IO")
+        })
+      }
+      MediaPlayer.MEDIA_ERROR_MALFORMED -> {
+        fireEvent("error", Arguments.createMap().apply {
+          putString("message", "MEDIA_ERROR_MALFORMED")
+        })
+      }
+      MediaPlayer.MEDIA_ERROR_UNSUPPORTED -> {
+        fireEvent("error", Arguments.createMap().apply {
+          putString("message", "MEDIA_ERROR_UNSUPPORTED")
+        })
+      }
+      MediaPlayer.MEDIA_ERROR_TIMED_OUT -> {
+        fireEvent("error", Arguments.createMap().apply {
+          putString("message", "MEDIA_ERROR_TIMED_OUT")
+        })
+      }
     }
     return false
   }
 
   override fun onInfo(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
-    Log.d("RNVP", "onInfo")
     when (what) {
       MediaPlayer.MEDIA_INFO_BUFFERING_START -> {
         fireEvent("bufferingStart", null)

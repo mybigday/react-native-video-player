@@ -52,18 +52,19 @@ class ReactNativeVideoPlayerViewManager :
     view?.setProgressUpdateInterval(value)
   }
 
-  // override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> {
-  //   return mapOf(
-  //     "seekTo" to mapOf("registrationName" to "onSeekTo"),
-  //     "bufferingStart" to mapOf("registrationName" to "onStartBuffering"),
-  //     "bufferingEnd" to mapOf("registrationName" to "onEndBuffering"),
-  //     "play" to mapOf("registrationName" to "onPlay"),
-  //     "progress" to mapOf("registrationName" to "onProgress"),
-  //     "end" to mapOf("registrationName" to "onEnd"),
-  //     "error" to mapOf("registrationName" to "onError"),
-  //     "videoSize" to mapOf("registrationName" to "onVideoSize")
-  //   )
-  // }
+  override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> {
+    return mutableMapOf(
+      "seekTo" to mutableMapOf("registrationName" to "onSeekTo"),
+      "bufferingStart" to mutableMapOf("registrationName" to "onStartBuffering"),
+      "bufferingEnd" to mutableMapOf("registrationName" to "onEndBuffering"),
+      "ready" to mutableMapOf("registrationName" to "onReady"),
+      "play" to mutableMapOf("registrationName" to "onPlay"),
+      "progress" to mutableMapOf("registrationName" to "onProgress"),
+      "end" to mutableMapOf("registrationName" to "onEnd"),
+      "error" to mutableMapOf("registrationName" to "onError"),
+      "videoSize" to mutableMapOf("registrationName" to "onVideoSize")
+    )
+  }
 
   companion object {
     const val NAME = "ReactNativeVideoPlayerView"
