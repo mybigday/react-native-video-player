@@ -181,12 +181,12 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   override fun onPrepared(mp: MediaPlayer?) {
-    fireEvent("ready", null)
     player?.setLooping(mLoop)
     player?.setVolume(mVolume, mVolume)
     if (mSeekTo > 0) {
       mp?.seekTo(mSeekTo)
     }
+    fireEvent("ready", null)
     if (!mPaused) {
       mp?.start()
     }
