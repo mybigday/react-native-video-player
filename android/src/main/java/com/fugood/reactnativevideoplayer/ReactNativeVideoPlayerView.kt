@@ -17,9 +17,6 @@ import android.widget.FrameLayout
 import android.net.Uri
 import android.util.Log
 
-import java.util.Timer
-import java.util.TimerTask
-
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.ReactContext
@@ -33,14 +30,19 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   protected var mPaused = false
   protected var mSeekTo = 0
   protected var mLoop = false
-  protected var mProgressUpdateInterval = 250
+  protected var mProgressUpdateInterval = 250L
   protected val mPlaybackParams = PlaybackParams()
 
   protected val container = AspectFrameLayout(context)
   protected val surface = SurfaceView(context)
   protected var player: MediaPlayer? = null
-  protected var progressTimer: Timer? = null
   protected var isReady = false
+
+  protected val updateProgressTask = object : Runnable {
+    override fun run() {
+      updateProgress()
+    }
+  }
 
   constructor(context: Context) : this(context, null)
   constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
@@ -63,14 +65,12 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   override fun surfaceCreated(holder: SurfaceHolder) {
     isReady = true
     play(mUrl)
-    setupProgressUptateTimer()
   }
 
   override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
   }
 
   override fun surfaceDestroyed(holder: SurfaceHolder) {
-    progressTimer?.cancel()
     player?.release()
     player = null
     isReady = false
@@ -101,21 +101,16 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     }
   }
 
-  protected fun setupProgressUptateTimer() {
-    progressTimer?.cancel()
-    if (mProgressUpdateInterval <= 0) {
+  protected fun updateProgress() {
+    if (player == null) {
       return
     }
-    progressTimer = Timer()
-    progressTimer?.scheduleAtFixedRate(object : TimerTask() {
-      override fun run() {
-        if (player?.isPlaying == true) {
-          fireEvent("progress", Arguments.createMap().apply {
-            putInt("position", player?.currentPosition ?: 0)
-          })
-        }
-      }
-    }, 0, mProgressUpdateInterval.toLong())
+    fireEvent("progress", Arguments.createMap().apply {
+      putInt("position", player?.currentPosition ?: 0)
+    })
+    if (player?.isPlaying == true) {
+      postDelayed(updateProgressTask, mProgressUpdateInterval)
+    }
   }
 
   fun setUrl(url: String?) {
@@ -183,8 +178,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   fun setProgressUpdateInterval(interval: Int?) {
-    mProgressUpdateInterval = interval ?: 0
-    setupProgressUptateTimer()
+    mProgressUpdateInterval = (interval ?: 0).toLong()
   }
 
   private fun fireEvent(name: String, event: WritableMap?) {
@@ -269,6 +263,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
       }
       MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
         fireEvent("play", null)
+        updateProgress()
       }
     }
     return false
