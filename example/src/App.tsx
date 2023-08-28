@@ -1,45 +1,34 @@
 import * as React from 'react';
 
 import { StyleSheet, View } from 'react-native';
-import { VideoPlayer } from '@fugood/react-native-video-player';
-
-const NUM = 5;
+import VideoPlayer from '@fugood/react-native-video-player';
 
 export default function App() {
-  const [num, setNum] = React.useState(0);
+  const [i, setI] = React.useState(0);
 
-  const ready = React.useCallback(() => {
-    setNum((n) => n + 1);
-    console.log(`[ready] ${performance.now()}`);
+  const next = React.useCallback(() => {
+    setI((n) => n + 1);
+    setTimeout(() => setI((n) => n + 1), 1000);
   }, []);
-
-  React.useEffect(() => {
-    console.log(`[render] ${performance.now()}`);
-
-    return () => setNum(0);
-  }, []);
-
-  const paused = React.useMemo(() => num < NUM, [num]);
 
   return (
     <View style={styles.container}>
-      {new Array(NUM).fill(null).map((_, i) => (
+      {i % 2 === 0 && (
         <VideoPlayer
           key={i}
-          url="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          source={{
+            uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+          }}
           style={styles.box}
-          onReady={ready}
-          progressUpdateInterval={10000}
-          onPlay={() => console.log(`[play-${i}] ${performance.now()}`)}
+          progressUpdateInterval={5000}
+          onLoad={() => console.log(`[load-${i}] ${performance.now()}`)}
           onProgress={({ nativeEvent: { position } }) =>
             console.log(`[progress-${i}] ${position}`)
           }
-          onEnd={() => console.log(`[end-${i}] ${performance.now()}`)}
+          onEnd={next}
           onError={({ nativeEvent }) => console.error(nativeEvent)}
-          loop
-          paused={paused}
         />
-      ))}
+      )}
     </View>
   );
 }

@@ -18,6 +18,7 @@ import android.net.Uri
 import android.util.Log
 
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.uimanager.UIManagerModule
@@ -26,6 +27,8 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   OnPreparedListener, OnCompletionListener, OnErrorListener, OnInfoListener, OnSeekCompleteListener, OnVideoSizeChangedListener {
 
   protected var mUrl: String? = null
+  protected var mHeaders: Map<String, String>? = null
+  protected var mMuted = false
   protected var mVolume = 1.0f
   protected var mPaused = false
   protected var mSeekTo = 0
@@ -64,7 +67,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
 
   override fun surfaceCreated(holder: SurfaceHolder) {
     isReady = true
-    play(mUrl)
+    initPlayer()
   }
 
   override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -76,7 +79,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     isReady = false
   }
 
-  protected fun play(url: String?) {
+  protected fun initPlayer() {
     if (!isReady) {
       return
     }
@@ -87,8 +90,8 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
       } else {
         player!!.reset()
       }
-      if (url?.isEmpty() == false) {
-        player!!.setDataSource(url)
+      if (mUrl?.isEmpty() == false) {
+        player!!.setDataSource(context, Uri.parse(mUrl), mHeaders)
         player!!.setScreenOnWhilePlaying(true)
         player!!.prepareAsync()
         player!!.setOnPreparedListener(this)
@@ -113,9 +116,10 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     }
   }
 
-  fun setUrl(url: String?) {
+  fun setSource(url: String?, headers: Map<String, String>?) {
     mUrl = url
-    play(mUrl)
+    mHeaders = headers
+    initPlayer()
   }
 
   fun setLoop(loop: Boolean) {
@@ -134,7 +138,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
       return
     }
     post {
-      player?.setVolume(mVolume, mVolume)
+      player?.setVolume(this.volume, this.volume)
     }
   }
 
@@ -152,18 +156,23 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     }
   }
 
-  fun setSeekTo(seekTo: Int) {
-    mSeekTo = seekTo
+  fun setMuted(muted: Boolean) {
+    mMuted = muted
     if (!isReady) {
       return
     }
     post {
-      player?.seekTo(mSeekTo)
+      player?.setVolume(volume, volume)
     }
   }
 
+  fun setSeekTo(seekTo: Int) {
+    mSeekTo = seekTo
+    this.seekTo(mSeekTo)
+  }
+
   fun setResizeMode(mode: String?) {
-    var resizeMode = enumValueOf<AspectFrameLayout.ResizeMode>(mode ?: "stretch")
+    var resizeMode = enumValueOf<AspectFrameLayout.ResizeMode>(mode ?: "cover")
     container.resizeMode = resizeMode
   }
 
@@ -174,6 +183,45 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     }
     post {
       player?.setPlaybackParams(mPlaybackParams)
+    }
+  }
+
+  fun seekTo(position: Int) {
+    if (!isReady) {
+      return
+    }
+    post {
+      player?.seekTo(position)
+    }
+  }
+
+  fun play() {
+    if (!isReady) {
+      return
+    }
+    post {
+      player?.start()
+      updateProgress()
+    }
+  }
+
+  fun pause() {
+    if (!isReady) {
+      return
+    }
+    post {
+      player?.pause()
+      removeCallbacks(updateProgressTask)
+    }
+  }
+
+  fun stop() {
+    if (!isReady) {
+      return
+    }
+    post {
+      player?.stop()
+      removeCallbacks(updateProgressTask)
     }
   }
 
@@ -193,7 +241,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     }
     mp.setPlaybackParams(mPlaybackParams)
     mp.setLooping(mLoop)
-    mp.setVolume(mVolume, mVolume)
+    mp.setVolume(volume, volume)
     if (mSeekTo > 0) {
       mp.seekTo(mSeekTo)
     }
@@ -204,6 +252,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   override fun onCompletion(mp: MediaPlayer?) {
+    removeCallbacks(updateProgressTask)
     fireEvent("end", null)
   }
 
@@ -211,9 +260,8 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     Log.d("VideoPlayer", "onError: $what, $extra")
     if (what == MediaPlayer.MEDIA_ERROR_SERVER_DIED) {
       player?.release()
-      player = MediaPlayer()
-      player?.setDisplay(surface.holder)
-      play(mUrl)
+      player = null
+      initPlayer()
       return true
     } else {
       when (extra) {
@@ -262,7 +310,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
         fireEvent("bufferingEnd", null)
       }
       MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
-        fireEvent("play", null)
+        fireEvent("load", null)
         updateProgress()
       }
     }
@@ -283,6 +331,9 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
       putInt("height", height)
     })
   }
+
+  val volume: Float
+    get() = if (mMuted) 0.0f else mVolume
 
   val duration: Int
     get() = player?.duration ?: 0
