@@ -7,6 +7,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -103,6 +107,7 @@ jobs:
 
   build-ios:
     runs-on: macos-latest
+    timeout-minutes: 30
     env:
       TURBO_CACHE_DIR: .turbo/ios
     steps:
