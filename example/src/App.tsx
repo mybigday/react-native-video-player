@@ -17,7 +17,7 @@ export default function App() {
         <VideoPlayer
           key={i}
           source={{
-            uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+            uri: 'https://www.w3schools.com/html/mov_bbb.mp4',
           }}
           style={styles.box}
           progressUpdateInterval={5000}
