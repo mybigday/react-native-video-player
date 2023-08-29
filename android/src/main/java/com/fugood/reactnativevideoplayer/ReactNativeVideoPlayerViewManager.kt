@@ -45,8 +45,8 @@ class ReactNativeVideoPlayerViewManager :
   }
 
   @ReactProp(name = "seek")
-  override fun setSeek(view: ReactNativeVideoPlayerView?, value: Int?) {
-    view?.setSeekTo(value ?: 0)
+  override fun setSeek(view: ReactNativeVideoPlayerView?, value: Float) {
+    view?.setSeekTo(value)
   }
 
   @ReactProp(name = "resizeMode")
@@ -66,7 +66,7 @@ class ReactNativeVideoPlayerViewManager :
 
   override fun receiveCommand(view: ReactNativeVideoPlayerView, commandId: Int, args: ReadableArray?) {
     when (commandId) {
-      COMMAND_SEEK -> view.seekTo(args?.getInt(0) ?: 0)
+      COMMAND_SEEK -> view.seekTo(args?.getFloat(0) ?: 0)
       COMMAND_PLAY -> view.play()
       COMMAND_PAUSE -> view.pause()
       COMMAND_STOP -> view.stop()

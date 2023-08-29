@@ -109,7 +109,8 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
       return
     }
     fireEvent("progress", Arguments.createMap().apply {
-      putInt("position", player?.currentPosition ?: 0)
+      putDouble("position", (player?.currentPosition ?: 0).toDouble() / 1000)
+      putDouble("duration", (player?.duration ?: 0).toDouble() / 1000)
     })
     if (player?.isPlaying == true) {
       postDelayed(updateProgressTask, mProgressUpdateInterval)
@@ -166,8 +167,8 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     }
   }
 
-  fun setSeekTo(seekTo: Int) {
-    mSeekTo = seekTo
+  fun setSeekTo(seekTo: Float) {
+    mSeekTo = (seekTo * 1000).toInt()
     this.seekTo(mSeekTo)
   }
 
@@ -186,12 +187,12 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     }
   }
 
-  fun seekTo(position: Int) {
+  fun seekTo(position: Float) {
     if (!isReady) {
       return
     }
     post {
-      player?.seekTo(position)
+      player?.seekTo((position * 1000).toInt())
     }
   }
 
