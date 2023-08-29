@@ -173,7 +173,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   fun setResizeMode(mode: String?) {
-    var resizeMode = enumValueOf<AspectFrameLayout.ResizeMode>(mode ?: "cover")
+    var resizeMode = enumValueOf<AspectFrameLayout.ResizeMode>(mode ?: "contain")
     container.resizeMode = resizeMode
   }
 

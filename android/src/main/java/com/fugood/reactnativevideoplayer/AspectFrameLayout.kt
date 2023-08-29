@@ -21,7 +21,7 @@ class AspectFrameLayout: FrameLayout {
     STRETCH
   }
 
-  protected var mResizeMode = ResizeMode.COVER
+  protected var mResizeMode = ResizeMode.CONTAIN
   protected var mAspectRatio = -1.0f
 
   var resizeMode: ResizeMode
