@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  s.platforms    = { :ios => "8.4", :tvos => "10.2" }
+  s.platforms    = { :ios => "9.0", :tvos => "9.0" }
   s.source       = { :git => "https://github.com/mybigday//fugood-react-native-video-player.git", :tag => "#{s.version}" }
 
   s.source_files = "ios/**/*.{h,m,mm}"
