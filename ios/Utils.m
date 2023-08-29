@@ -1,21 +1,21 @@
-#import <Foundation/Foundation.h>
 #import "Utils.h"
-#import <UIKit/UIKit.h>
+#import <AVFoundation/AVFoundation.h>
 
 @implementation Utils
 
-+ hexStringToColor:(NSString *)stringToConvert
++ sourceToPlayItem:(NSString *)uri headers:(NSDictionary *)headers
 {
-    NSString *noHashString = [stringToConvert stringByReplacingOccurrencesOfString:@"#" withString:@""];
-    NSScanner *stringScanner = [NSScanner scannerWithString:noHashString];
-    
-    unsigned hex;
-    if (![stringScanner scanHexInt:&hex]) return nil;
-    int r = (hex >> 16) & 0xFF;
-    int g = (hex >> 8) & 0xFF;
-    int b = (hex) & 0xFF;
-    
-    return [UIColor colorWithRed:r / 255.0f green:g / 255.0f blue:b / 255.0f alpha:1.0f];
+  if (uri == nil) {
+    return nil;
+  }
+  NSURL *url = [NSURL URLWithString:uri];
+  if (url == nil) {
+    return nil;
+  }
+  AVURLAsset *asset = headers == nil
+    ? [AVURLAsset URLAssetWithURL:url options:nil]
+    : [AVURLAsset URLAssetWithURL:url options:@{@"AVURLAssetHTTPHeaderFieldsKey": headers}];
+  return [AVPlayerItem playerItemWithAsset:asset];
 }
 
 + (id)alloc {

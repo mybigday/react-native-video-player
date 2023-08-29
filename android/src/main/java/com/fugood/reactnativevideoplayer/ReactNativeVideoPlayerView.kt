@@ -257,7 +257,6 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   override fun onError(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
-    Log.d("VideoPlayer", "onError: $what, $extra")
     if (what == MediaPlayer.MEDIA_ERROR_SERVER_DIED) {
       player?.release()
       player = null
@@ -267,32 +266,32 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
       when (extra) {
         MediaPlayer.MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK")
+            putString("error", "MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK")
           })
         }
         MediaPlayer.MEDIA_ERROR_IO -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_IO")
+            putString("error", "MEDIA_ERROR_IO")
           })
         }
         MediaPlayer.MEDIA_ERROR_MALFORMED -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_MALFORMED")
+            putString("error", "MEDIA_ERROR_MALFORMED")
           })
         }
         MediaPlayer.MEDIA_ERROR_UNSUPPORTED -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_UNSUPPORTED")
+            putString("error", "MEDIA_ERROR_UNSUPPORTED")
           })
         }
         MediaPlayer.MEDIA_ERROR_TIMED_OUT -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_TIMED_OUT")
+            putString("error", "MEDIA_ERROR_TIMED_OUT")
           })
         }
         else -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_UNKNOWN")
+            putString("error", "MEDIA_ERROR_UNKNOWN")
           })
         }
       }
@@ -301,13 +300,16 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   override fun onInfo(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
-    Log.d("VideoPlayer", "onInfo: $what, $extra")
     when (what) {
       MediaPlayer.MEDIA_INFO_BUFFERING_START -> {
-        fireEvent("bufferingStart", null)
+        fireEvent("buffering", Arguments.createMap().apply {
+          putBoolean("isBuffering", true)
+        })
       }
       MediaPlayer.MEDIA_INFO_BUFFERING_END -> {
-        fireEvent("bufferingEnd", null)
+        fireEvent("buffering", Arguments.createMap().apply {
+          putBoolean("isBuffering", false)
+        })
       }
       MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
         fireEvent("load", null)
@@ -318,18 +320,10 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   override fun onSeekComplete(mp: MediaPlayer?) {
-    fireEvent("seekTo", Arguments.createMap().apply {
-      putInt("position", mp?.currentPosition ?: 0)
-    })
   }
 
   override fun onVideoSizeChanged(mp: MediaPlayer?, width: Int, height: Int) {
-    Log.d("VideoPlayer", "onVideoSizeChanged: $width, $height")
     container.aspectRatio = width.toFloat() / height.toFloat()
-    fireEvent("videoSize", Arguments.createMap().apply {
-      putInt("width", width)
-      putInt("height", height)
-    })
   }
 
   val volume: Float

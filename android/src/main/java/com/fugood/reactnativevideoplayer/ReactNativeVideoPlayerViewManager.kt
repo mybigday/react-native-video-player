@@ -85,15 +85,12 @@ class ReactNativeVideoPlayerViewManager :
 
   override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> {
     return mutableMapOf(
-      "seekTo" to mutableMapOf("registrationName" to "onSeekTo"),
-      "bufferingStart" to mutableMapOf("registrationName" to "onStartBuffering"),
-      "bufferingEnd" to mutableMapOf("registrationName" to "onEndBuffering"),
-      "ready" to mutableMapOf("registrationName" to "onReady"),
+      "buffering" to mutableMapOf("registrationName" to "onBuffer"),
+      "ready" to mutableMapOf("registrationName" to "onReadyForDisplay"),
       "load" to mutableMapOf("registrationName" to "onLoad"),
       "progress" to mutableMapOf("registrationName" to "onProgress"),
       "end" to mutableMapOf("registrationName" to "onEnd"),
-      "error" to mutableMapOf("registrationName" to "onError"),
-      "videoSize" to mutableMapOf("registrationName" to "onVideoSize")
+      "error" to mutableMapOf("registrationName" to "onError")
     )
   }
 

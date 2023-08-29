@@ -6,15 +6,15 @@ import type { DirectEventHandler } from 'react-native/Libraries/Types/CodegenTyp
 
 export type ProgressEvent = Readonly<{
   position: number;
+  duration: number;
 }>;
 
 export type ErrorEvent = Readonly<{
   message: number;
 }>;
 
-export type VideoSizeEvent = Readonly<{
-  width: number;
-  height: number;
+export type BufferingEvent = Readonly<{
+  isBuffering: boolean;
 }>;
 
 export interface VideoPlayerProps extends ViewProps {
@@ -30,15 +30,12 @@ export interface VideoPlayerProps extends ViewProps {
   speed?: number;
   progressUpdateInterval?: number;
 
-  onSeekTo?: DirectEventHandler<ProgressEvent>;
-  onStartBuffering?: DirectEventHandler<null>;
-  onEndBuffering?: DirectEventHandler<null>;
-  onReady?: DirectEventHandler<null>;
+  onBuffer?: DirectEventHandler<BufferingEvent>;
+  onReadyForDisplay?: DirectEventHandler<null>;
   onLoad?: DirectEventHandler<null>;
   onProgress?: DirectEventHandler<ProgressEvent>;
   onEnd?: DirectEventHandler<null>;
   onError?: DirectEventHandler<ErrorEvent>;
-  onVideoSize?: DirectEventHandler<VideoSizeEvent>;
 }
 
 type ComponentType = HostComponent<VideoPlayerProps>;

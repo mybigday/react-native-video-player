@@ -21,9 +21,12 @@ export default function App() {
           }}
           style={styles.box}
           progressUpdateInterval={5000}
+          onReadyForDisplay={() =>
+            console.log(`[ready-${i}] ${performance.now()}`)
+          }
           onLoad={() => console.log(`[load-${i}] ${performance.now()}`)}
-          onProgress={({ nativeEvent: { position } }) =>
-            console.log(`[progress-${i}] ${position}`)
+          onProgress={({ nativeEvent: { position, duration } }) =>
+            console.log(`[progress-${i}] ${position} / ${duration}`)
           }
           onEnd={next}
           onError={({ nativeEvent }) => console.error(nativeEvent)}
