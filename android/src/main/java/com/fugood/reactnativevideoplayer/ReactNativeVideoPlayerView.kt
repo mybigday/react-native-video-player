@@ -167,11 +167,6 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     }
   }
 
-  fun setSeekTo(seekTo: Float) {
-    mSeekTo = (seekTo * 1000).toInt()
-    this.seekTo(mSeekTo)
-  }
-
   fun setResizeMode(mode: String?) {
     var resizeMode = enumValueOf<AspectFrameLayout.ResizeMode>(mode ?: "contain")
     container.resizeMode = resizeMode

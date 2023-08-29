@@ -46,7 +46,7 @@ class ReactNativeVideoPlayerViewManager :
 
   @ReactProp(name = "seek")
   override fun setSeek(view: ReactNativeVideoPlayerView?, value: Float) {
-    view?.setSeekTo(value)
+    view?.seekTo(value)
   }
 
   @ReactProp(name = "resizeMode")
