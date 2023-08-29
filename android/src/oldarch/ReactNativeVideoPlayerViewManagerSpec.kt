@@ -11,7 +11,7 @@ abstract class ReactNativeVideoPlayerViewManagerSpec<T : View> : SimpleViewManag
   abstract fun setVolume(view: T?, value: Float)
   abstract fun setPaused(view: T?, value: Boolean?)
   abstract fun setMuted(view: T?, value: Boolean?)
-  abstract fun setSeek(view: T?, value: Int?)
+  abstract fun setSeek(view: T?, value: Float)
   abstract fun setResizeMode(view: T?, value: String?)
   abstract fun setSpeed(view: T?, value: Float)
   abstract fun setProgressUpdateInterval(view: T?, value: Int?)
