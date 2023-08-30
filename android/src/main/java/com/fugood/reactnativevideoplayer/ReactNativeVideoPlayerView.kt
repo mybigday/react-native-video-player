@@ -55,6 +55,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     defStyleAttr
   ) {
     val params = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+    params.gravity = android.view.Gravity.CENTER
     val aspectParams = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
     aspectParams.gravity = android.view.Gravity.CENTER
 
