@@ -228,7 +228,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   private fun fireEvent(name: String, event: WritableMap?) {
     (context as ReactContext)
       .getNativeModule(UIManagerModule::class.java)
-      ?.receiveEvent(id, name, event)
+      ?.receiveEvent(id, name, event ?: Arguments.createMap())
   }
 
   override fun onPrepared(mp: MediaPlayer?) {
