@@ -8,11 +8,15 @@
 
 @implementation ReactNativeVideoPlayerViewManager
 
-RCT_EXPORT_MODULE()
+RCT_EXPORT_MODULE(ReactNativeVideoPlayerView)
 
 - (UIView *)view
 {
+#ifdef RCT_NEW_ARCH_ENABLED
+  return [[ReactNativeVideoPlayerView alloc] init];
+#else
   return [[ReactNativeVideoPlayerView alloc] initWithBridge:self.bridge];
+#endif
 }
 
 RCT_EXPORT_VIEW_PROPERTY(source, NSDictionary);

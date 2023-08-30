@@ -15,7 +15,7 @@
 
 using namespace facebook::react;
 
-@interface ReactNativeVideoPlayerView () <RCTReactNativeVideoPlayerViewViewProtocol, VLCMediaPlayerDelegate>
+@interface ReactNativeVideoPlayerView () <RCTReactNativeVideoPlayerViewViewProtocol>
 @end
 
 #else
@@ -210,9 +210,17 @@ using namespace facebook::react;
     const auto &oldViewProps = *std::static_pointer_cast<ReactNativeVideoPlayerViewProps const>(_props);
     const auto &newViewProps = *std::static_pointer_cast<ReactNativeVideoPlayerViewProps const>(props);
 
-    if (oldViewProps.source != newViewProps.source) {
+    if (oldViewProps.source.uri != newViewProps.source.uri) {
       NSString * uri = [[NSString alloc] initWithUTF8String: newViewProps.source.uri.c_str()];
-      NSDictionary *headers = newViewProps.source.headers;
+      NSDictionary *headers = nil;
+      if (newViewProps.source.headers.isObject()) {
+        headers = [NSMutableDictionary new];
+        for (auto &pair : newViewProps.source.headers.items()) {
+          NSString *key = [[NSString alloc] initWithUTF8String: pair.first.c_str()];
+          NSString *value = [[NSString alloc] initWithUTF8String: pair.second.c_str()];
+          [headers setValue:value forKey:key];
+        }
+      }
       [self playItem:[Utils sourceToPlayItem:uri headers:headers]];
     }
 
@@ -246,9 +254,9 @@ using namespace facebook::react;
     }
 
     if (oldViewProps.resizeMode != newViewProps.resizeMode) {
-      if ([newViewProps.resizeMode isEqualToString:@"stretch"]) {
+      if (newViewProps.resizeMode == "stretch") {
         _layer.contentsGravity = kCAGravityResize;
-      } else if ([newViewProps.resizeMode isEqualToString:@"cover"]) {
+      } else if (newViewProps.resizeMode == "cover") {
         _layer.contentsGravity = kCAGravityResizeAspectFill;
       } else {
         _layer.contentsGravity = kCAGravityResizeAspect;
@@ -279,7 +287,7 @@ using namespace facebook::react;
 {
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
-      ->onReadyForDisplay();
+      ->onReadyForDisplay(ReactNativeVideoPlayerViewEventEmitter::OnReadyForDisplay{});
   }
 }
 
@@ -287,7 +295,7 @@ using namespace facebook::react;
 {
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
-      ->onLoad();
+      ->onLoad(ReactNativeVideoPlayerViewEventEmitter::OnLoad{});
   }
 }
 
@@ -296,7 +304,7 @@ using namespace facebook::react;
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
       ->onError(ReactNativeVideoPlayerViewEventEmitter::OnError{
-        .message = error.localizedDescription,
+        .message = error.localizedDescription.UTF8String,
       });
   }
 }
@@ -305,7 +313,7 @@ using namespace facebook::react;
 {
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
-      ->onEnd();
+      ->onEnd(ReactNativeVideoPlayerViewEventEmitter::OnEnd{});
   }
 }
 

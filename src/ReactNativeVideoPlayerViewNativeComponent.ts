@@ -1,16 +1,22 @@
-import type { ElementRef } from 'react';
+import type * as React from 'react';
 import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
 import codegenNativeCommands from 'react-native/Libraries/Utilities/codegenNativeCommands';
 import type { ViewProps, HostComponent } from 'react-native';
-import type { DirectEventHandler } from 'react-native/Libraries/Types/CodegenTypes';
+import type {
+  DirectEventHandler,
+  Int32,
+  Float,
+  // @ts-ignore
+  UnsafeMixed,
+} from 'react-native/Libraries/Types/CodegenTypes';
 
 export type ProgressEvent = Readonly<{
-  position: number;
-  duration: number;
+  position: Float;
+  duration: Float;
 }>;
 
 export type ErrorEvent = Readonly<{
-  message: number;
+  message: string;
 }>;
 
 export type BufferingEvent = Readonly<{
@@ -20,15 +26,16 @@ export type BufferingEvent = Readonly<{
 export interface VideoPlayerProps extends ViewProps {
   source?: {
     uri?: string;
-    headers?: { [key: string]: string };
+    headers?: UnsafeMixed;
   };
   loop?: boolean;
   paused?: boolean;
   muted?: boolean;
-  volume?: number;
-  resizeMode?: 'contain' | 'cover' | 'stretch';
-  speed?: number;
-  progressUpdateInterval?: number;
+  volume?: Float;
+  seek?: Float;
+  resizeMode?: string;
+  speed?: Float;
+  progressUpdateInterval?: Int32;
 
   onBuffer?: DirectEventHandler<BufferingEvent>;
   onReadyForDisplay?: DirectEventHandler<null>;
@@ -41,10 +48,10 @@ export interface VideoPlayerProps extends ViewProps {
 type ComponentType = HostComponent<VideoPlayerProps>;
 
 interface NativeCommands {
-  seek: (viewRef: ElementRef<ComponentType>, position: number) => void;
-  play: (viewRef: ElementRef<ComponentType>) => void;
-  pause: (viewRef: ElementRef<ComponentType>) => void;
-  stop: (viewRef: ElementRef<ComponentType>) => void;
+  seek: (viewRef: React.ElementRef<ComponentType>, position: Float) => void;
+  play: (viewRef: React.ElementRef<ComponentType>) => void;
+  pause: (viewRef: React.ElementRef<ComponentType>) => void;
+  stop: (viewRef: React.ElementRef<ComponentType>) => void;
 }
 
 export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({

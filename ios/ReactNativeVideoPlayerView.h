@@ -9,6 +9,12 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface ReactNativeVideoPlayerView : RCTViewComponentView
+
+- (void)play;
+- (void)pause;
+- (void)stop;
+- (void)seekTo:(float)time;
+
 @end
 
 NS_ASSUME_NONNULL_END
