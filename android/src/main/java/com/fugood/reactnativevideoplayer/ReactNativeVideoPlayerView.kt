@@ -84,24 +84,22 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     if (!isReady) {
       return
     }
-    post {
-      if (player == null) {
-        player = MediaPlayer()
-        player!!.setDisplay(surface.holder)
-      } else {
-        player!!.reset()
-      }
-      if (mUrl?.isEmpty() == false) {
-        player!!.setDataSource(context, Uri.parse(mUrl), mHeaders)
-        player!!.setScreenOnWhilePlaying(true)
-        player!!.prepareAsync()
-        player!!.setOnPreparedListener(this)
-        player!!.setOnCompletionListener(this)
-        player!!.setOnErrorListener(this)
-        player!!.setOnInfoListener(this)
-        player!!.setOnSeekCompleteListener(this)
-        player!!.setOnVideoSizeChangedListener(this)
-      }
+    if (player == null) {
+      player = MediaPlayer()
+      player!!.setDisplay(surface.holder)
+    } else {
+      player!!.reset()
+    }
+    if (mUrl?.isEmpty() == false) {
+      player!!.setDataSource(context, Uri.parse(mUrl), mHeaders)
+      player!!.setScreenOnWhilePlaying(true)
+      player!!.prepareAsync()
+      player!!.setOnPreparedListener(this)
+      player!!.setOnCompletionListener(this)
+      player!!.setOnErrorListener(this)
+      player!!.setOnInfoListener(this)
+      player!!.setOnSeekCompleteListener(this)
+      player!!.setOnVideoSizeChangedListener(this)
     }
   }
 
@@ -121,7 +119,12 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   fun setSource(url: String?, headers: Map<String, String>?) {
     mUrl = url
     mHeaders = headers
-    initPlayer()
+    if (!isReady) {
+      return
+    }
+    post {
+      initPlayer()
+    }
   }
 
   fun setLoop(loop: Boolean) {
