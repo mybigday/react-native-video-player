@@ -25,11 +25,11 @@ export default function App() {
             console.log(`[ready-${i}] ${performance.now()}`)
           }
           onLoad={() => console.log(`[load-${i}] ${performance.now()}`)}
-          onProgress={({ nativeEvent: { position, duration } }) =>
-            console.log(`[progress-${i}] ${position} / ${duration}`)
+          onProgress={({ currentTime, duration }) =>
+            console.log(`[progress-${i}] ${currentTime} / ${duration}`)
           }
           onEnd={next}
-          onError={({ nativeEvent }) => console.error(nativeEvent)}
+          onError={(err) => console.error(err)}
         />
       )}
     </View>

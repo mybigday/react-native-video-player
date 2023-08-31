@@ -11,7 +11,7 @@ import type {
 } from 'react-native/Libraries/Types/CodegenTypes';
 
 export type ProgressEvent = Readonly<{
-  position: Float;
+  currentTime: Float;
   duration: Float;
 }>;
 

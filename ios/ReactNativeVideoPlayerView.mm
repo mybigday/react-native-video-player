@@ -317,12 +317,12 @@ using namespace facebook::react;
   }
 }
 
-- (void)emitOnProgress:(float)position duration:(float)duration
+- (void)emitOnProgress:(float)currentTime duration:(float)duration
 {
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
       ->onProgress(ReactNativeVideoPlayerViewEventEmitter::OnProgress{
-        .position = position,
+        .currentTime = currentTime,
         .duration = duration,
       });
   }
@@ -456,11 +456,11 @@ Class<RCTComponentViewProtocol> ReactNativeVideoPlayerViewCls(void)
   }
 }
 
-- (void)emitOnProgress:(float)position duration:(float)duration
+- (void)emitOnProgress:(float)currentTime duration:(float)duration
 {
   if (self.onProgress) {
     self.onProgress(@{
-      @"position": @(position),
+      @"currentTime": @(currentTime),
       @"duration": @(duration),
     });
   }

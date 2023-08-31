@@ -108,7 +108,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
       return
     }
     fireEvent("progress", Arguments.createMap().apply {
-      putDouble("position", (player?.currentPosition ?: 0).toDouble() / 1000)
+      putDouble("currentTime", (player?.currentPosition ?: 0).toDouble() / 1000)
       putDouble("duration", (player?.duration ?: 0).toDouble() / 1000)
     })
     if (player?.isPlaying == true) {
