@@ -56,11 +56,10 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 - (void)initCommon:(UIView *)view
 {
   dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0), dispatch_get_main_queue(), ^{
-    NSLog(@"init player");
     _player = [[AVPlayer alloc] init];
 
     _layer = [AVPlayerLayer playerLayerWithPlayer:_player];
-    _layer.contentsGravity = AVLayerVideoGravityResizeAspect;
+    _layer.videoGravity = AVLayerVideoGravityResizeAspect;
 
     [view.layer addSublayer:_layer];
     view.layer.needsDisplayOnBoundsChange = YES;
@@ -169,7 +168,7 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 
 - (void)setLayerGravity:(CALayerContentsGravity)gravity
 {
-  _layer.contentsGravity = gravity;
+  _layer.videoGravity = gravity;
 }
 
 - (void)setPaused:(BOOL)paused
