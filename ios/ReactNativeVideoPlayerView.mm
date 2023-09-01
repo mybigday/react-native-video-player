@@ -41,6 +41,14 @@ using namespace facebook::react;
 
 #pragma mark - Common
 
+- (instancetype)initWithCoder:(NSCoder *)aDecoder
+{
+  if ((self = [super initWithCoder:aDecoder])) {
+    [self initCommon:self];
+  }
+  return self;
+}
+
 - (void)initCommon:(UIView*) view
 {
   _player = [[AVPlayer alloc] init];
@@ -180,7 +188,7 @@ using namespace facebook::react;
   [_player pause];
 }
 
-- (void)seek:(float)time
+- (void)seekTo:(float)time
 {
   [_player seekToTime:CMTimeMakeWithSeconds(time, NSEC_PER_MSEC)];
 }
@@ -288,7 +296,7 @@ using namespace facebook::react;
   } else if ([commandName isEqualToString:@"pause"]) {
     [self pause];
   } else if ([commandName isEqualToString:@"seek"]) {
-    [self seek:[args[0] floatValue]];
+    [self seekTo:[args[0] floatValue]];
   } else if ([commandName isEqualToString:@"stop"]) {
     [self stop];
   }
