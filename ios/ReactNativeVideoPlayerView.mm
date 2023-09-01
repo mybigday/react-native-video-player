@@ -75,6 +75,17 @@ using namespace facebook::react;
   _layer.frame = self.bounds;
 }
 
+- (void)didMoveToSuperview
+{
+  if (!self.superview) {
+    [_player pause];
+  } else {
+    if (!_paused) {
+      [_player play];
+    }
+  }
+}
+
 -(void)dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
