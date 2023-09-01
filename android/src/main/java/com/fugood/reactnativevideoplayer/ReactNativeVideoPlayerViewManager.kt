@@ -16,6 +16,11 @@ class ReactNativeVideoPlayerViewManager :
   public override fun createViewInstance(context: ThemedReactContext) =
     ReactNativeVideoPlayerView(context)
 
+  public override fun onDropViewInstance(view: ReactNativeVideoPlayerView) {
+    super.onDropViewInstance(view)
+    view.release()
+  }
+
   @ReactProp(name = "source")
   override fun setSource(view: ReactNativeVideoPlayerView, value: ReadableMap?) {
     view.setSource(

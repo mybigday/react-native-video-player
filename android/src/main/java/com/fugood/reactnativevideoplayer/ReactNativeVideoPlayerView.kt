@@ -31,10 +31,14 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   protected var mMuted = false
   protected var mVolume = 1.0f
   protected var mPaused = false
-  protected var mSeekTo = 0
+  protected var mSeekTo = 0L
   protected var mLoop = false
   protected var mProgressUpdateInterval = 250L
   protected val mPlaybackParams = PlaybackParams()
+  // State
+  protected var mPlaying = false
+  protected var mPosition = 0L
+  protected var mBackgroundPaused = false
 
   protected val container = AspectFrameLayout(context)
   protected val surface = SurfaceView(context)
@@ -68,13 +72,29 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
 
   override fun surfaceCreated(holder: SurfaceHolder) {
     isReady = true
-    initPlayer()
+    if (!mBackgroundPaused) {
+      initPlayer()
+    } else {
+      mBackgroundPaused = false
+      player?.setDisplay(holder)
+      if (mPlaying) {
+        player?.seekTo(mPosition, MediaPlayer.SEEK_CLOSEST)
+      }
+    }
   }
 
   override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
   }
 
   override fun surfaceDestroyed(holder: SurfaceHolder) {
+    player?.setDisplay(null)
+    mBackgroundPaused = true
+    mPlaying = player?.isPlaying ?: false
+    mPosition = player?.currentPosition?.toLong() ?: 0L
+    player?.pause()
+  }
+
+  fun release() {
     player?.release()
     player = null
     isReady = false
@@ -104,7 +124,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   protected fun updateProgress() {
-    if (player == null) {
+    if (player == null || mBackgroundPaused) {
       return
     }
     fireEvent("progress", Arguments.createMap().apply {
@@ -188,10 +208,12 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
 
   fun seekTo(position: Float) {
     if (!isReady) {
+      mSeekTo = (position * 1000).toLong()
       return
     }
+    mPlaying = player?.isPlaying ?: false
     post {
-      player?.seekTo((position * 1000).toInt())
+      player?.seekTo((position * 1000).toLong(), MediaPlayer.SEEK_CLOSEST)
     }
   }
 
@@ -243,10 +265,11 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     mp.setLooping(mLoop)
     mp.setVolume(volume, volume)
     if (mSeekTo > 0) {
-      mp.seekTo(mSeekTo)
+      mPlaying = true
+      mp.seekTo(mSeekTo, MediaPlayer.SEEK_CLOSEST)
     }
     fireEvent("ready", null)
-    if (!mPaused) {
+    if (!mPaused && mSeekTo <= 0) {
       mp.start()
     }
   }
@@ -266,27 +289,27 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
       when (extra) {
         MediaPlayer.MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("error", "MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK")
+            putString("message", "MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK")
           })
         }
         MediaPlayer.MEDIA_ERROR_IO -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("error", "MEDIA_ERROR_IO")
+            putString("message", "MEDIA_ERROR_IO")
           })
         }
         MediaPlayer.MEDIA_ERROR_MALFORMED -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("error", "MEDIA_ERROR_MALFORMED")
+            putString("message", "MEDIA_ERROR_MALFORMED")
           })
         }
         MediaPlayer.MEDIA_ERROR_UNSUPPORTED -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("error", "MEDIA_ERROR_UNSUPPORTED")
+            putString("message", "MEDIA_ERROR_UNSUPPORTED")
           })
         }
         MediaPlayer.MEDIA_ERROR_TIMED_OUT -> {
           fireEvent("error", Arguments.createMap().apply {
-            putString("error", "MEDIA_ERROR_TIMED_OUT")
+            putString("message", "MEDIA_ERROR_TIMED_OUT")
           })
         }
         else -> {
@@ -320,6 +343,10 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   override fun onSeekComplete(mp: MediaPlayer?) {
+    if (mPlaying) {
+      updateProgress()
+      mp?.start()
+    }
   }
 
   override fun onVideoSizeChanged(mp: MediaPlayer?, width: Int, height: Int) {
