@@ -21,7 +21,7 @@ RCT_EXPORT_MODULE(ReactNativeVideoPlayerView)
 
 RCT_EXPORT_VIEW_PROPERTY(source, NSDictionary);
 RCT_EXPORT_VIEW_PROPERTY(paused, BOOL);
-RCT_EXPORT_VIEW_PROPERTY(seek, float);
+RCT_EXPORT_VIEW_PROPERTY(seek, Float64);
 RCT_EXPORT_VIEW_PROPERTY(volume, float);
 RCT_EXPORT_VIEW_PROPERTY(speed, float);
 RCT_EXPORT_VIEW_PROPERTY(muted, BOOL);
@@ -67,7 +67,7 @@ RCT_EXPORT_METHOD(seek:(nonnull NSNumber *)reactTag time:(nonnull NSNumber *)tim
     if (![view isKindOfClass:[ReactNativeVideoPlayerView class]]) {
       RCTLogError(@"Invalid view returned from registry, expecting ReactNativeVideoPlayerView, got: %@", view);
     } else {
-      [view seekTo:[time floatValue]];
+      [view seekTo:[time doubleValue]];
     }
   }];
 }

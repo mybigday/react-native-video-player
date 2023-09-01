@@ -13,7 +13,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)play;
 - (void)pause;
 - (void)stop;
-- (void)seekTo:(float)time;
+- (void)seekTo:(Float64)time;
 
 @end
 
@@ -44,7 +44,7 @@ NS_ASSUME_NONNULL_END
 - (void)play;
 - (void)pause;
 - (void)stop;
-- (void)seekTo:(float)time;
+- (void)seekTo:(Float64)time;
 
 @end
 
