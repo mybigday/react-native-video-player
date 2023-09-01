@@ -8,6 +8,9 @@
   if (uri == nil) {
     return nil;
   }
+  if ([uri hasPrefix:@"/"]) {
+    return [AVPlayerItem playerItemWithURL:[NSURL fileURLWithPath:uri]];
+  }
   NSURL *url = [NSURL URLWithString:uri];
   if (url == nil) {
     return nil;
