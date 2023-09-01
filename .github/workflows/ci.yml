@@ -56,7 +56,7 @@ jobs:
     env:
       TURBO_CACHE_DIR: .turbo/android
     if: |
-      !contains(github.event.head_commit.modified, 'example/android/') && \
+      !contains(github.event.head_commit.modified, 'example/android/') &&
       !contains(github.event.head_commit.modified, 'android/')
     steps:
       - name: Checkout
@@ -114,8 +114,8 @@ jobs:
     env:
       TURBO_CACHE_DIR: .turbo/ios
     if: |
-      !contains(github.event.head_commit.modified, 'example/ios/') && \
-      !contains(github.event.head_commit.modified, 'ios/') && \
+      !contains(github.event.head_commit.modified, 'example/ios/') &&
+      !contains(github.event.head_commit.modified, 'ios/') &&
       !contains(github.event.head_commit.modified, '.podspec')
     steps:
       - name: Checkout
