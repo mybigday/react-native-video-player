@@ -1,6 +1,7 @@
 # @fugood/react-native-video-player
 
-Video player for React Native
+Video player for React Native.
+Uses platform owned player API, and pay attention to the performance.
 
 ## Installation
 
