@@ -1,6 +1,6 @@
 {
   "name": "@fugood/react-native-video-player",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Video player for React Native",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
