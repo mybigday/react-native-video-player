@@ -27,9 +27,10 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.ReactContext
+import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.uimanager.UIManagerModule
 
-class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureView.SurfaceTextureListener,
+class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureView.SurfaceTextureListener, LifecycleEventListener,
   OnPreparedListener, OnCompletionListener, OnErrorListener, OnInfoListener, OnSeekCompleteListener, OnVideoSizeChangedListener {
 
   protected var mUrl: String? = null
@@ -76,6 +77,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     }
     container.layoutParams = aspectParams
     addViewInLayout(container, 0, aspectParams)
+    (context as ReactContext).addLifecycleEventListener(this)
   }
 
   private fun setupVideoView() {
@@ -106,17 +108,44 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     container.addView(videoView, 0, params)
   }
 
-  override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-    isReady = true
-    if (!mBackgroundPaused) {
-      initPlayer()
-    } else {
+  private fun moveToBackground() {
+    mBackgroundPaused = true
+    mPlaying = player?.isPlaying ?: false
+    mPosition = player?.currentPosition?.toLong() ?: 0L
+    player?.pause()
+  }
+
+  private fun resume() {
+    if (mBackgroundPaused) {
       mBackgroundPaused = false
-      player?.setSurface(Surface(surface))
+      if (!mUseTextureView) {
+        player?.setDisplay((videoView as SurfaceView).holder)
+      }
       if (mPlaying) {
         player?.seekTo(mPosition, MediaPlayer.SEEK_CLOSEST)
       }
     }
+  }
+
+  override fun onHostPause() {
+    if (mUseTextureView) {
+      moveToBackground()
+    }
+  }
+
+  override fun onHostDestroy() {
+    release()
+  }
+
+  override fun onHostResume() {
+    if (mUseTextureView) {
+      resume()
+    }
+  }
+
+  override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+    isReady = true
+    initPlayer()
   }
 
   override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
@@ -127,10 +156,6 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
 
   override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
     player?.setSurface(null)
-    mBackgroundPaused = true
-    mPlaying = player?.isPlaying ?: false
-    mPosition = player?.currentPosition?.toLong() ?: 0L
-    player?.pause()
     return true
   }
 
@@ -139,11 +164,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     if (!mBackgroundPaused) {
       initPlayer()
     } else {
-      mBackgroundPaused = false
-      player?.setDisplay(holder)
-      if (mPlaying) {
-        player?.seekTo(mPosition, MediaPlayer.SEEK_CLOSEST)
-      }
+      resume()
     }
   }
 
@@ -151,14 +172,12 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
   }
 
   override fun surfaceDestroyed(holder: SurfaceHolder) {
+    moveToBackground()
     player?.setDisplay(null)
-    mBackgroundPaused = true
-    mPlaying = player?.isPlaying ?: false
-    mPosition = player?.currentPosition?.toLong() ?: 0L
-    player?.pause()
   }
 
   fun release() {
+    (context as ReactContext).removeLifecycleEventListener(this)
     player?.release()
     player = null
     isReady = false
@@ -170,14 +189,14 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     }
     if (player == null) {
       player = MediaPlayer()
-      if (mUseTextureView) {
-        player!!.setSurface(Surface((videoView as TextureView).surfaceTexture))
-      } else {
-        player!!.setDisplay((videoView as SurfaceView).holder)
-        player!!.setScreenOnWhilePlaying(true)
-      }
     } else {
       player!!.reset()
+    }
+    if (mUseTextureView) {
+      player!!.setSurface(Surface((videoView as TextureView).surfaceTexture))
+    } else {
+      player!!.setDisplay((videoView as SurfaceView).holder)
+      player!!.setScreenOnWhilePlaying(true)
     }
     if (mUrl?.isEmpty() == false) {
       player!!.setDataSource(context, Uri.parse(mUrl), mHeaders)
