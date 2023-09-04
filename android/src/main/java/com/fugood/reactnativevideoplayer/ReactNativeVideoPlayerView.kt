@@ -200,7 +200,11 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
       putDouble("duration", (player?.duration ?: 0).toDouble() / 1000)
     })
     if (player?.isPlaying == true) {
-      postDelayed(updateProgressTask, mProgressUpdateInterval)
+      val nextDelay = Math.min(
+        mProgressUpdateInterval,
+        player?.duration?.minus(player?.currentPosition ?: 0)?.toLong() ?: Long.MAX_VALUE
+      )
+      postDelayed(updateProgressTask, nextDelay)
     }
   }
 
@@ -312,6 +316,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     post {
       player?.pause()
       removeCallbacks(updateProgressTask)
+      updateProgress()
     }
   }
 
@@ -322,6 +327,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     post {
       player?.stop()
       removeCallbacks(updateProgressTask)
+      updateProgress()
     }
   }
 
