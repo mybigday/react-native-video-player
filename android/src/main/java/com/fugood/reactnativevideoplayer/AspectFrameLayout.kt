@@ -59,7 +59,6 @@ class AspectFrameLayout: FrameLayout {
     val height = MeasureSpec.getSize(heightMeasureSpec)
     val viewRatio = width.toFloat() / height.toFloat()
     val aspectDeformation = mAspectRatio / viewRatio - 1
-    Log.d("AspectFrame", "onMeasure: $aspectDeformation, $viewRatio, $mAspectRatio, $mResizeMode")
     if (mAspectRatio <= 0 || Math.abs(aspectDeformation) <= 0.01 || mResizeMode == ResizeMode.STRETCH) {
       super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     } else {
@@ -67,7 +66,7 @@ class AspectFrameLayout: FrameLayout {
       var newHeight: Int = height
       when (mResizeMode) {
         ResizeMode.COVER -> {
-          newWidth = (width.toFloat() * mAspectRatio).toInt()
+          newWidth = (height.toFloat() * mAspectRatio).toInt()
           if (newWidth < width) {
             val scaleFactor = width.toFloat() / newWidth
             newWidth = (width.toFloat() * scaleFactor).toInt()
