@@ -192,8 +192,10 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   }
 
   fun setResizeMode(mode: String?) {
-    val resizeMode = enumValueOf<AspectFrameLayout.ResizeMode>((mode ?: "contain").uppercase())
-    container.resizeMode = resizeMode
+    val value = enumValueOf<AspectFrameLayout.ResizeMode>((mode ?: "").uppercase())
+    if (value != null) {
+      container.resizeMode = value
+    }
   }
 
   fun setSpeed(speed: Float) {
