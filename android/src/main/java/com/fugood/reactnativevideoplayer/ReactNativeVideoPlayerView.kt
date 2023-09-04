@@ -10,9 +10,15 @@ import android.media.MediaPlayer.OnErrorListener
 import android.media.MediaPlayer.OnInfoListener
 import android.media.MediaPlayer.OnSeekCompleteListener
 import android.media.MediaPlayer.OnVideoSizeChangedListener
+import android.view.View
+import android.view.TextureView
+import android.view.Surface
 import android.view.SurfaceView
 import android.view.SurfaceHolder
 import android.view.View.MeasureSpec
+import android.view.Gravity
+import android.graphics.PixelFormat
+import android.graphics.SurfaceTexture
 import android.widget.FrameLayout
 import android.net.Uri
 import android.util.Log
@@ -23,7 +29,7 @@ import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.uimanager.UIManagerModule
 
-class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
+class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureView.SurfaceTextureListener,
   OnPreparedListener, OnCompletionListener, OnErrorListener, OnInfoListener, OnSeekCompleteListener, OnVideoSizeChangedListener {
 
   protected var mUrl: String? = null
@@ -34,6 +40,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   protected var mSeekTo = 0L
   protected var mLoop = false
   protected var mProgressUpdateInterval = 250L
+  protected var mUseTextureView = true
   protected val mPlaybackParams = PlaybackParams()
   // State
   protected var mPlaying = false
@@ -41,7 +48,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
   protected var mBackgroundPaused = false
 
   protected val container = AspectFrameLayout(context)
-  protected val surface = SurfaceView(context)
+  protected var videoView: View? = null
   protected var player: MediaPlayer? = null
   protected var isReady = false
 
@@ -58,16 +65,72 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     attrs,
     defStyleAttr
   ) {
-    val params = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-    params.gravity = android.view.Gravity.CENTER
     val aspectParams = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-    aspectParams.gravity = android.view.Gravity.CENTER
+    aspectParams.gravity = Gravity.CENTER
 
-    surface.layoutParams = params
-    surface.holder.addCallback(this)
-    container.addView(surface, 0, params)
+    post {
+      if (videoView == null) {
+        setupVideoView()
+      }
+    }
     container.layoutParams = aspectParams
     addViewInLayout(container, 0, aspectParams)
+  }
+
+  private fun setupVideoView() {
+    val params = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+    params.gravity = Gravity.CENTER
+
+    if (videoView != null) {
+      container.removeView(videoView)
+    }
+
+    if (mUseTextureView) {
+      Log.d("ReactNativeVideoPlayerView", "Using TextureView")
+      val view = TextureView(context)
+      view.layoutParams = params
+      view.surfaceTextureListener = this
+
+      videoView = view
+    } else {
+      Log.d("ReactNativeVideoPlayerView", "Using SurfaceView")
+      val view = SurfaceView(context)
+      view.layoutParams = params
+      view.setZOrderMediaOverlay(true)
+      view.holder.setFormat(PixelFormat.TRANSLUCENT)
+      view.holder.addCallback(this)
+
+      videoView = view
+    }
+    container.addView(videoView, 0, params)
+  }
+
+  override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+    isReady = true
+    if (!mBackgroundPaused) {
+      initPlayer()
+    } else {
+      mBackgroundPaused = false
+      player?.setSurface(Surface(surface))
+      if (mPlaying) {
+        player?.seekTo(mPosition, MediaPlayer.SEEK_CLOSEST)
+      }
+    }
+  }
+
+  override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+  }
+
+  override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
+  }
+
+  override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+    player?.setSurface(null)
+    mBackgroundPaused = true
+    mPlaying = player?.isPlaying ?: false
+    mPosition = player?.currentPosition?.toLong() ?: 0L
+    player?.pause()
+    return true
   }
 
   override fun surfaceCreated(holder: SurfaceHolder) {
@@ -106,13 +169,17 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     }
     if (player == null) {
       player = MediaPlayer()
-      player!!.setDisplay(surface.holder)
+      if (mUseTextureView) {
+        player!!.setSurface(Surface((videoView as TextureView).surfaceTexture))
+      } else {
+        player!!.setDisplay((videoView as SurfaceView).holder)
+        player!!.setScreenOnWhilePlaying(true)
+      }
     } else {
       player!!.reset()
     }
     if (mUrl?.isEmpty() == false) {
       player!!.setDataSource(context, Uri.parse(mUrl), mHeaders)
-      player!!.setScreenOnWhilePlaying(true)
       player!!.prepareAsync()
       player!!.setOnPreparedListener(this)
       player!!.setOnCompletionListener(this)
@@ -133,6 +200,14 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback,
     })
     if (player?.isPlaying == true) {
       postDelayed(updateProgressTask, mProgressUpdateInterval)
+    }
+  }
+
+  fun setUseTextureView(useTextureView: Boolean) {
+    if (mUseTextureView != useTextureView) {
+      mUseTextureView = useTextureView
+      isReady = false
+      setupVideoView()
     }
   }
 

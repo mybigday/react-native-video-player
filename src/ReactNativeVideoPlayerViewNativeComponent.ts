@@ -36,6 +36,7 @@ export interface VideoPlayerProps extends ViewProps {
   resizeMode?: string;
   speed?: Float;
   progressUpdateInterval?: Int32;
+  useTextureView?: boolean;
 
   onBuffer?: DirectEventHandler<BufferingEvent>;
   onReadyForDisplay?: DirectEventHandler<null>;

@@ -69,6 +69,11 @@ class ReactNativeVideoPlayerViewManager :
     view.setProgressUpdateInterval(value)
   }
 
+  @ReactProp(name = "useTextureView")
+  override fun setUseTextureView(view: ReactNativeVideoPlayerView, value: Boolean) {
+    view.setUseTextureView(value)
+  }
+
   override fun seek(view: ReactNativeVideoPlayerView, value: Float) {
     view.seekTo(value)
   }
