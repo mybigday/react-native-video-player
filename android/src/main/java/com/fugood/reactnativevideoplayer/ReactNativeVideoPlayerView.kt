@@ -40,7 +40,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
   protected var mSeekTo = 0L
   protected var mLoop = false
   protected var mProgressUpdateInterval = 250L
-  protected var mUseTextureView = true
+  protected var mUseTextureView = false
   protected val mPlaybackParams = PlaybackParams()
   // State
   protected var mPlaying = false
