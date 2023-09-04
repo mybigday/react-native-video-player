@@ -49,7 +49,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
 
   protected val container = AspectFrameLayout(context)
   protected var videoView: View? = null
-  protected var player: MediaPlayer? = null
+  protected var player: MediaPlayer? = MediaPlayer()
   protected var isReady = false
 
   protected val updateProgressTask = object : Runnable {
@@ -68,6 +68,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     val aspectParams = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
     aspectParams.gravity = Gravity.CENTER
 
+    // defer create view to avoid switching view type
     post {
       if (videoView == null) {
         setupVideoView()
