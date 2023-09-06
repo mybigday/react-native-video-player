@@ -363,19 +363,21 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     if (mp == null) {
       return
     }
-    if (!mUseTextureView) {
-      (videoView as SurfaceView).setZOrderOnTop(false)
-    }
     mp.setPlaybackParams(mPlaybackParams)
     mp.setLooping(mLoop)
     mp.setVolume(volume, volume)
-    if (mSeekTo > 0) {
-      mPlaying = true
-      mp.seekTo(mSeekTo, MediaPlayer.SEEK_CLOSEST)
-    }
     fireEvent("ready", null)
-    if (!mPaused && mSeekTo <= 0) {
+    if (mSeekTo > 0) {
+      mPlaying = !mPaused
+      mp.seekTo(mSeekTo, MediaPlayer.SEEK_CLOSEST)
+    } else {
       mp.start()
+      if (mPaused) {
+        mp.pause()
+      }
+    }
+    if (!mUseTextureView) {
+      (videoView as SurfaceView).setZOrderOnTop(false)
     }
   }
 
