@@ -99,8 +99,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
       Log.d("ReactNativeVideoPlayerView", "Using SurfaceView")
       val view = SurfaceView(context)
       view.layoutParams = params
-      view.setZOrderMediaOverlay(true)
-      view.holder.setFormat(PixelFormat.TRANSLUCENT)
+      view.setZOrderOnTop(true)
       view.holder.addCallback(this)
 
       videoView = view
@@ -363,6 +362,9 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
   override fun onPrepared(mp: MediaPlayer?) {
     if (mp == null) {
       return
+    }
+    if (!mUseTextureView) {
+      (videoView as SurfaceView).setZOrderOnTop(false)
     }
     mp.setPlaybackParams(mPlaybackParams)
     mp.setLooping(mLoop)
