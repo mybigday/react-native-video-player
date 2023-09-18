@@ -90,6 +90,16 @@ class ReactNativeVideoPlayerViewManager :
     view.stop()
   }
 
+  override fun receiveCommand(view: ReactNativeVideoPlayerView, commandId: String, args: ReadableArray?) {
+    when (commandId) {
+      "seek" -> seek(view, (args?.getDouble(0) ?: 0.0).toFloat())
+      "play" -> play(view)
+      "pause" -> pause(view)
+      "stop" -> stop(view)
+      else -> throw IllegalArgumentException("Invalid commandId: $commandId")
+    }
+  }
+
   override fun receiveCommand(view: ReactNativeVideoPlayerView, commandId: Int, args: ReadableArray?) {
     when (commandId) {
       COMMAND_SEEK -> seek(view, (args?.getDouble(0) ?: 0.0).toFloat())
