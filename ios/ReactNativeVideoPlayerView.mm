@@ -113,8 +113,7 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 - (void)playerItemDidPlayToEndTime:(NSNotification *)notification
 {
   if (_loop) {
-    [_player seekToTime:kCMTimeZero];
-    [_player play];
+    [self seekTo:0];
   } else {
     [self emitOnEnd];
   }
@@ -183,7 +182,7 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 
 - (void)setSeek:(Float64)seek
 {
-  [_player seekToTime:CMTimeMakeWithSeconds(seek, NSEC_PER_SEC)];
+  [self seekTo:seek];
 }
 
 - (void)setVolume:(float)volume
@@ -238,7 +237,13 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 
 - (void)seekTo:(Float64)time
 {
-  [_player seekToTime:CMTimeMakeWithSeconds(time, NSEC_PER_SEC)];
+  [_player seekToTime:CMTimeMakeWithSeconds(time, NSEC_PER_SEC) completionHandler:^(BOOL finished) {
+    if (finished) {
+      if (!_paused) {
+        [_player play];
+      }
+    }
+  }];
 }
 
 - (void)stop
