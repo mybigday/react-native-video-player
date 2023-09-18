@@ -68,8 +68,6 @@ export default forwardRef<VideoPlayerHandle, Props>(function VideoPlayer(
     stop,
   ]);
 
-  console.log('nativeRef', nativeRef.current);
-
   return (
     <Player
       {...rest}
