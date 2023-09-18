@@ -23,7 +23,17 @@ export type Props = Modify<
   }
 >;
 
-export default forwardRef(function VideoPlayer(props: Props, ref) {
+export type VideoPlayerHandle = {
+  seek: (position: number) => void;
+  play: () => void;
+  pause: () => void;
+  stop: () => void;
+};
+
+export default forwardRef<VideoPlayerHandle, Props>(function VideoPlayer(
+  props,
+  ref
+) {
   const {
     onReadyForDisplay,
     onLoad,
@@ -35,13 +45,30 @@ export default forwardRef(function VideoPlayer(props: Props, ref) {
   } = props;
   const nativeRef = useRef<PlayerRef>(null);
 
-  useImperativeHandle(ref, () => ({
-    seek: (position: number) =>
-      nativeRef.current && Commands.seek(nativeRef.current, position),
-    play: () => nativeRef.current && Commands.play(nativeRef.current),
-    pause: () => nativeRef.current && Commands.pause(nativeRef.current),
-    stop: () => nativeRef.current && Commands.stop(nativeRef.current),
-  }));
+  const seek = useCallback((position: number) => {
+    nativeRef.current && Commands.seek(nativeRef.current, position);
+  }, []);
+
+  const play = useCallback(() => {
+    nativeRef.current && Commands.play(nativeRef.current);
+  }, []);
+
+  const pause = useCallback(() => {
+    nativeRef.current && Commands.pause(nativeRef.current);
+  }, []);
+
+  const stop = useCallback(() => {
+    nativeRef.current && Commands.stop(nativeRef.current);
+  }, []);
+
+  useImperativeHandle(ref, () => ({ seek, play, pause, stop }), [
+    seek,
+    play,
+    pause,
+    stop,
+  ]);
+
+  console.log('nativeRef', nativeRef.current);
 
   return (
     <Player
