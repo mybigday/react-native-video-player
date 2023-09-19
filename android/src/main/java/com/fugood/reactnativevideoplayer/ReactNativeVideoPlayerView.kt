@@ -33,6 +33,16 @@ import com.facebook.react.uimanager.UIManagerModule
 class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureView.SurfaceTextureListener, LifecycleEventListener,
   OnPreparedListener, OnCompletionListener, OnErrorListener, OnInfoListener, OnSeekCompleteListener, OnVideoSizeChangedListener {
 
+  enum class State {
+    IDLE,
+    PREPARING,
+    PREPARED,
+    PLAYING,
+    PAUSED,
+    STOPPED,
+    COMPLETED
+  }
+
   protected var mUrl: String? = null
   protected var mHeaders: Map<String, String>? = null
   protected var mMuted = false
@@ -44,7 +54,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
   protected var mUseTextureView = false
   protected val mPlaybackParams = PlaybackParams()
   // State
-  protected var mPlaying = false
+  protected var mState = State.IDLE
   protected var mPosition = 0L
   protected var mBackgroundPaused = false
 
@@ -109,7 +119,6 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
 
   private fun moveToBackground() {
     mBackgroundPaused = true
-    mPlaying = player?.isPlaying ?: false
     mPosition = player?.currentPosition?.toLong() ?: 0L
     player?.pause()
   }
@@ -120,7 +129,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
       if (!mUseTextureView) {
         player?.setDisplay((videoView as SurfaceView).holder)
       }
-      if (mPlaying) {
+      if (mState == State.PLAYING) {
         player?.seekTo(mPosition, MediaPlayer.SEEK_CLOSEST)
       }
     }
@@ -198,6 +207,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
       player!!.setScreenOnWhilePlaying(true)
     }
     if (mUrl?.isEmpty() == false) {
+      mState = State.PREPARING
       player!!.setDataSource(context, Uri.parse(mUrl), mHeaders)
       player!!.prepareAsync()
       player!!.setOnPreparedListener(this)
@@ -206,6 +216,8 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
       player!!.setOnInfoListener(this)
       player!!.setOnSeekCompleteListener(this)
       player!!.setOnVideoSizeChangedListener(this)
+    } else {
+      mState = State.IDLE
     }
   }
 
@@ -311,7 +323,6 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
       mSeekTo = (position * 1000).toLong()
       return
     }
-    mPlaying = player?.isPlaying ?: false
     post {
       player?.seekTo((position * 1000).toLong(), MediaPlayer.SEEK_CLOSEST)
     }
@@ -322,8 +333,13 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
       return
     }
     post {
-      player?.start()
-      updateProgress()
+      if (mState == State.STOPPED || mState == State.IDLE) {
+        initPlayer()
+      } else {
+        player?.start()
+        updateProgress()
+        mState = State.PLAYING
+      }
     }
   }
 
@@ -335,6 +351,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
       player?.pause()
       removeCallbacks(updateProgressTask)
       updateProgress()
+      mState = State.PAUSED
     }
   }
 
@@ -346,6 +363,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
       player?.stop()
       removeCallbacks(updateProgressTask)
       updateProgress()
+      mState = State.STOPPED
     }
   }
 
@@ -363,17 +381,22 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     if (mp == null) {
       return
     }
+    mState = State.PREPARED
     mp.setPlaybackParams(mPlaybackParams)
     mp.setLooping(mLoop)
     mp.setVolume(volume, volume)
     fireEvent("ready", null)
     if (mSeekTo > 0) {
-      mPlaying = !mPaused
+      if (!mPaused) {
+        mState = State.PLAYING
+      }
       mp.seekTo(mSeekTo, MediaPlayer.SEEK_CLOSEST)
     } else {
       mp.start()
       if (mPaused) {
         mp.pause()
+      } else {
+        mState = State.PLAYING
       }
     }
     if (!mUseTextureView) {
@@ -384,6 +407,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
   override fun onCompletion(mp: MediaPlayer?) {
     removeCallbacks(updateProgressTask)
     fireEvent("end", null)
+    mState = State.COMPLETED
   }
 
   override fun onError(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
@@ -450,7 +474,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
   }
 
   override fun onSeekComplete(mp: MediaPlayer?) {
-    if (mPlaying) {
+    if (mState == State.PLAYING) {
       updateProgress()
       mp?.start()
     }
