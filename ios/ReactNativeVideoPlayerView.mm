@@ -107,6 +107,15 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 -(void)dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
+  [_player removeObserver:self forKeyPath:STATUS_KEY];
+  [_player removeObserver:self forKeyPath:CURR_STATUS_KEY];
+  [_player removeObserver:self forKeyPath:CURR_BUFF_EMPTY_KEY];
+  [_player removeObserver:self forKeyPath:CURR_CONTINUE_PLAY_KEY];
+  if (_timeObserver) {
+    [_player removeTimeObserver:_timeObserver];
+  }
+  [_player replaceCurrentItemWithPlayerItem:nil];
+  _player = nil;
 }
 
 - (void)playerItemDidPlayToEndTime:(NSNotification *)notification
