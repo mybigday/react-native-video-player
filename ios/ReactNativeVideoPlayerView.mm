@@ -33,6 +33,7 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 @implementation ReactNativeVideoPlayerView {
 #ifdef RCT_NEW_ARCH_ENABLED
   UIView *_view;
+  BOOL _needReplay;
 #else
   RCTBridge *_bridge;
 #endif
@@ -114,6 +115,12 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 #ifndef RCT_NEW_ARCH_ENABLED
   [self _release];
 #endif
+}
+
+- (void)prepareForRecycle
+{
+  [_player pause];
+  _needReplay = YES;
 }
 
 - (void)_release
@@ -317,6 +324,9 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
         }
       }
       [self playItem:[Utils sourceToPlayItem:uri headers:headers]];
+    } else if (_needReplay) {
+      [self seekTo:0];
+      _needReplay = NO;
     }
 
     if (oldViewProps.paused != newViewProps.paused) {
