@@ -30,21 +30,24 @@ export default function App() {
     currentTime: 0,
     duration: 0,
   });
+  const [showVideo, setShowVideo] = React.useState(false);
 
   return (
     <View style={styles.container}>
-      <VideoPlayer
-        ref={videoRef}
-        source={{
-          uri: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        }}
-        style={styles.box}
-        onReadyForDisplay={() => console.log(`[ready] ${performance.now()}`)}
-        onLoad={() => console.log(`[load] ${performance.now()}`)}
-        onProgress={setInfo}
-        onEnd={() => console.log(`[end] ${performance.now()}`)}
-        onError={(err) => console.error(err)}
-      />
+      {showVideo && (
+        <VideoPlayer
+          ref={videoRef}
+          source={{
+            uri: 'https://www.w3schools.com/html/mov_bbb.mp4',
+          }}
+          style={styles.box}
+          onReadyForDisplay={() => console.log(`[ready] ${performance.now()}`)}
+          onLoad={() => console.log(`[load] ${performance.now()}`)}
+          onProgress={setInfo}
+          onEnd={() => console.log(`[end] ${performance.now()}`)}
+          onError={(err) => console.error(err)}
+        />
+      )}
       <Text style={styles.info}>currentTime: {info.currentTime}</Text>
       <Text style={styles.info}>duration: {info.duration}</Text>
       <Button
@@ -69,6 +72,18 @@ export default function App() {
         title="Seek to 0"
         onPress={() => {
           videoRef.current?.seek(0);
+        }}
+      />
+      <Button
+        title="Show Video"
+        onPress={() => {
+          setShowVideo(true);
+        }}
+      />
+      <Button
+        title="Hide Video"
+        onPress={() => {
+          setShowVideo(false);
         }}
       />
     </View>

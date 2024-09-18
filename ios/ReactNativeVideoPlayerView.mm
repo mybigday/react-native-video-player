@@ -62,19 +62,7 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   view.layer.needsDisplayOnBoundsChange = YES;
 
   dispatch_async(dispatch_get_main_queue(), ^{
-    [_player addObserver:self forKeyPath:STATUS_KEY
-             options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial
-             context:nil];
-    [_player addObserver:self forKeyPath:CURR_STATUS_KEY
-             options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial
-             context:nil];
-    [_player addObserver:self forKeyPath:CURR_BUFF_EMPTY_KEY
-             options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial
-             context:nil];
-    [_player addObserver:self forKeyPath:CURR_CONTINUE_PLAY_KEY
-             options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial
-             context:nil];
-
+    [self addPlayerObservers];
     [self setProgressUpdateInterval:250];
 
     [[NSNotificationCenter defaultCenter] addObserver:self
@@ -82,6 +70,22 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
                                           name:AVPlayerItemDidPlayToEndTimeNotification
                                           object:nil];
   });
+}
+
+- (void)addPlayerObservers
+{
+  [_player addObserver:self forKeyPath:STATUS_KEY options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nil];
+  [_player addObserver:self forKeyPath:CURR_STATUS_KEY options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nil];
+  [_player addObserver:self forKeyPath:CURR_BUFF_EMPTY_KEY options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nil];
+  [_player addObserver:self forKeyPath:CURR_CONTINUE_PLAY_KEY options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nil];
+}
+
+- (void)removePlayerObservers
+{
+  [_player removeObserver:self forKeyPath:STATUS_KEY];
+  [_player removeObserver:self forKeyPath:CURR_STATUS_KEY];
+  [_player removeObserver:self forKeyPath:CURR_BUFF_EMPTY_KEY];
+  [_player removeObserver:self forKeyPath:CURR_CONTINUE_PLAY_KEY];
 }
 
 - (void)layoutSubviews
@@ -104,18 +108,27 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   }
 }
 
--(void)dealloc
+- (void)removeFromSuperview
+{
+  [super removeFromSuperview];
+#ifndef RCT_NEW_ARCH_ENABLED
+  [self _release];
+#endif
+}
+
+- (void)_release
 {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
-  [_player removeObserver:self forKeyPath:STATUS_KEY];
-  [_player removeObserver:self forKeyPath:CURR_STATUS_KEY];
-  [_player removeObserver:self forKeyPath:CURR_BUFF_EMPTY_KEY];
-  [_player removeObserver:self forKeyPath:CURR_CONTINUE_PLAY_KEY];
+  [self removePlayerObservers];
   if (_timeObserver) {
     [_player removeTimeObserver:_timeObserver];
+    _timeObserver = nil;
   }
+  [_player pause];
   [_player replaceCurrentItemWithPlayerItem:nil];
   _player = nil;
+  [_layer removeFromSuperlayer];
+  _layer = nil;
 }
 
 - (void)playerItemDidPlayToEndTime:(NSNotification *)notification
@@ -134,41 +147,43 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-  if ([object isKindOfClass:[AVPlayer class]]) {
-    AVPlayer *player = (AVPlayer *)object;
-    if ([keyPath isEqualToString:STATUS_KEY]) {
-      switch ([player status]) {
-      case AVPlayerStatusReadyToPlay:
-        [self emitOnReady];
-        break;
-      case AVPlayerStatusFailed:
-        [self emitOnError:player.error];
-        break;
-      case AVPlayerStatusUnknown:
-        break;
-      }
-    } else if ([keyPath isEqualToString:CURR_STATUS_KEY]) {
-      switch ([player.currentItem status]) {
-      case AVPlayerItemStatusReadyToPlay:
-        [self emitOnLoad];
-        if (!_paused) {
-          [_player play];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if ([object isKindOfClass:[AVPlayer class]]) {
+      AVPlayer *player = (AVPlayer *)object;
+      if ([keyPath isEqualToString:STATUS_KEY]) {
+        switch ([player status]) {
+        case AVPlayerStatusReadyToPlay:
+          [self emitOnReady];
+          break;
+        case AVPlayerStatusFailed:
+          [self emitOnError:player.error];
+          break;
+        case AVPlayerStatusUnknown:
+          break;
         }
-        break;
-      case AVPlayerItemStatusFailed:
-        [self emitOnError:player.currentItem.error];
-        break;
-      }
-    } else if ([keyPath isEqualToString:CURR_BUFF_EMPTY_KEY]) {
-      if (player.currentItem.playbackBufferEmpty) {
-        [self emitOnBuffer:YES];
-      }
-    } else if ([keyPath isEqualToString:CURR_CONTINUE_PLAY_KEY]) {
-      if (player.currentItem.playbackLikelyToKeepUp) {
-        [self emitOnBuffer:NO];
+      } else if ([keyPath isEqualToString:CURR_STATUS_KEY]) {
+        switch ([player.currentItem status]) {
+        case AVPlayerItemStatusReadyToPlay:
+          [self emitOnLoad];
+          if (!_paused) {
+            [_player play];
+          }
+          break;
+        case AVPlayerItemStatusFailed:
+          [self emitOnError:player.currentItem.error];
+          break;
+        }
+      } else if ([keyPath isEqualToString:CURR_BUFF_EMPTY_KEY]) {
+        if (player.currentItem.playbackBufferEmpty) {
+          [self emitOnBuffer:YES];
+        }
+      } else if ([keyPath isEqualToString:CURR_CONTINUE_PLAY_KEY]) {
+        if (player.currentItem.playbackLikelyToKeepUp) {
+          [self emitOnBuffer:NO];
+        }
       }
     }
-  }
+  });
 }
 
 #pragma mark - params
