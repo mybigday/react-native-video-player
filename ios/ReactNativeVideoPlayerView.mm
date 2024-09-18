@@ -120,7 +120,9 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 - (void)prepareForRecycle
 {
   [_player pause];
+#ifdef RCT_NEW_ARCH_ENABLED
   _needReplay = YES;
+#endif
 }
 
 - (void)_release
