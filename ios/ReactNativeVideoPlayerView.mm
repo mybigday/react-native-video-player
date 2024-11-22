@@ -70,6 +70,10 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
                                           selector:@selector(playerItemDidPlayToEndTime:)
                                           name:AVPlayerItemDidPlayToEndTimeNotification
                                           object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                          selector:@selector(restorePlay:)
+                                          name:UIApplicationDidBecomeActiveNotification
+                                          object:nil];
   });
 }
 
@@ -123,6 +127,13 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 #ifdef RCT_NEW_ARCH_ENABLED
   _needReplay = YES;
 #endif
+}
+
+- (void)restorePlay:(NSNotification *)notification
+{
+  if (!_paused) {
+    [_player play];
+  }
 }
 
 - (void)_release
