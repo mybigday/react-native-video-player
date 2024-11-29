@@ -75,7 +75,6 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
          selector:@selector(restorePlay:)
              name:UIApplicationDidBecomeActiveNotification
            object:nil];
-})
 }
 
 - (void)addPlayerObservers {
