@@ -62,19 +62,18 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   [view.layer addSublayer:_layer];
   view.layer.needsDisplayOnBoundsChange = YES;
 
-  dispatch_async(dispatch_get_main_queue(), ^{
-    [self addPlayerObservers];
-    [self setProgressUpdateInterval:250];
+  [self addPlayerObservers];
+  [self setProgressUpdateInterval:250];
 
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                          selector:@selector(playerItemDidPlayToEndTime:)
-                                          name:AVPlayerItemDidPlayToEndTimeNotification
-                                          object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                          selector:@selector(restorePlay:)
-                                          name:UIApplicationDidBecomeActiveNotification
-                                          object:nil];
-  });
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                        selector:@selector(playerItemDidPlayToEndTime:)
+                                        name:AVPlayerItemDidPlayToEndTimeNotification
+                                        object:nil];
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                        selector:@selector(restorePlay:)
+                                        name:UIApplicationDidBecomeActiveNotification
+                                        object:nil];
+  })
 }
 
 - (void)addPlayerObservers
@@ -167,43 +166,41 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-  dispatch_async(dispatch_get_main_queue(), ^{
-    if ([object isKindOfClass:[AVPlayer class]]) {
-      AVPlayer *player = (AVPlayer *)object;
-      if ([keyPath isEqualToString:STATUS_KEY]) {
-        switch ([player status]) {
-        case AVPlayerStatusReadyToPlay:
-          [self emitOnReady];
-          break;
-        case AVPlayerStatusFailed:
-          [self emitOnError:player.error];
-          break;
-        case AVPlayerStatusUnknown:
-          break;
+  if ([object isKindOfClass:[AVPlayer class]]) {
+    AVPlayer *player = (AVPlayer *)object;
+    if ([keyPath isEqualToString:STATUS_KEY]) {
+      switch ([player status]) {
+      case AVPlayerStatusReadyToPlay:
+        [self emitOnReady];
+        break;
+      case AVPlayerStatusFailed:
+        [self emitOnError:player.error];
+        break;
+      case AVPlayerStatusUnknown:
+        break;
+      }
+    } else if ([keyPath isEqualToString:CURR_STATUS_KEY]) {
+      switch ([player.currentItem status]) {
+      case AVPlayerItemStatusReadyToPlay:
+        [self emitOnLoad];
+        if (!_paused) {
+          [_player play];
         }
-      } else if ([keyPath isEqualToString:CURR_STATUS_KEY]) {
-        switch ([player.currentItem status]) {
-        case AVPlayerItemStatusReadyToPlay:
-          [self emitOnLoad];
-          if (!_paused) {
-            [_player play];
-          }
-          break;
-        case AVPlayerItemStatusFailed:
-          [self emitOnError:player.currentItem.error];
-          break;
-        }
-      } else if ([keyPath isEqualToString:CURR_BUFF_EMPTY_KEY]) {
-        if (player.currentItem.playbackBufferEmpty) {
-          [self emitOnBuffer:YES];
-        }
-      } else if ([keyPath isEqualToString:CURR_CONTINUE_PLAY_KEY]) {
-        if (player.currentItem.playbackLikelyToKeepUp) {
-          [self emitOnBuffer:NO];
-        }
+        break;
+      case AVPlayerItemStatusFailed:
+        [self emitOnError:player.currentItem.error];
+        break;
+      }
+    } else if ([keyPath isEqualToString:CURR_BUFF_EMPTY_KEY]) {
+      if (player.currentItem.playbackBufferEmpty) {
+        [self emitOnBuffer:YES];
+      }
+    } else if ([keyPath isEqualToString:CURR_CONTINUE_PLAY_KEY]) {
+      if (player.currentItem.playbackLikelyToKeepUp) {
+        [self emitOnBuffer:NO];
       }
     }
-  });
+  }
 }
 
 #pragma mark - params
