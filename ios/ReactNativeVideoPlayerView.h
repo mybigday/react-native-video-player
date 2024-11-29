@@ -32,12 +32,12 @@ NS_ASSUME_NONNULL_END
 
 @interface ReactNativeVideoPlayerView : RCTView
 
-@property (nonatomic, copy) RCTDirectEventBlock onReadyForDisplay;
-@property (nonatomic, copy) RCTDirectEventBlock onLoad;
-@property (nonatomic, copy) RCTDirectEventBlock onProgress;
-@property (nonatomic, copy) RCTDirectEventBlock onEnd;
-@property (nonatomic, copy) RCTDirectEventBlock onBuffer;
-@property (nonatomic, copy) RCTDirectEventBlock onError;
+@property(nonatomic, copy) RCTDirectEventBlock onReadyForDisplay;
+@property(nonatomic, copy) RCTDirectEventBlock onLoad;
+@property(nonatomic, copy) RCTDirectEventBlock onProgress;
+@property(nonatomic, copy) RCTDirectEventBlock onEnd;
+@property(nonatomic, copy) RCTDirectEventBlock onBuffer;
+@property(nonatomic, copy) RCTDirectEventBlock onError;
 
 - (instancetype)initWithBridge:(RCTBridge *)bridge NS_DESIGNATED_INITIALIZER;
 

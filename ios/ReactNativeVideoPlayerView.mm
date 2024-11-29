@@ -1,6 +1,6 @@
 #import "ReactNativeVideoPlayerView.h"
-#import <AVFoundation/AVFoundation.h>
 #import "Utils.h"
+#import <AVFoundation/AVFoundation.h>
 
 #ifdef RCT_NEW_ARCH_ENABLED
 
@@ -15,7 +15,8 @@
 
 using namespace facebook::react;
 
-@interface ReactNativeVideoPlayerView () <RCTReactNativeVideoPlayerViewViewProtocol>
+@interface ReactNativeVideoPlayerView () <
+    RCTReactNativeVideoPlayerViewViewProtocol>
 @end
 
 #else
@@ -28,7 +29,8 @@ using namespace facebook::react;
 static NSString *const STATUS_KEY = @"status";
 static NSString *const CURR_STATUS_KEY = @"currentItem.status";
 static NSString *const CURR_BUFF_EMPTY_KEY = @"currentItem.playbackBufferEmpty";
-static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKeepUp";
+static NSString *const CURR_CONTINUE_PLAY_KEY =
+    @"currentItem.playbackLikelyToKeepUp";
 
 @implementation ReactNativeVideoPlayerView {
 #ifdef RCT_NEW_ARCH_ENABLED
@@ -46,16 +48,14 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 
 #pragma mark - Common
 
-- (instancetype)initWithCoder:(NSCoder *)aDecoder
-{
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
   if ((self = [super initWithCoder:aDecoder])) {
     [self initCommon:self];
   }
   return self;
 }
 
-- (void)initCommon:(UIView *)view
-{
+- (void)initCommon:(UIView *)view {
   _player = [[AVPlayer alloc] init];
   _layer = [AVPlayerLayer playerLayerWithPlayer:_player];
   _layer.videoGravity = AVLayerVideoGravityResizeAspect;
@@ -65,35 +65,50 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   [self addPlayerObservers];
   [self setProgressUpdateInterval:250];
 
-  [[NSNotificationCenter defaultCenter] addObserver:self
-                                        selector:@selector(playerItemDidPlayToEndTime:)
-                                        name:AVPlayerItemDidPlayToEndTimeNotification
-                                        object:nil];
-  [[NSNotificationCenter defaultCenter] addObserver:self
-                                        selector:@selector(restorePlay:)
-                                        name:UIApplicationDidBecomeActiveNotification
-                                        object:nil];
-  })
+  [[NSNotificationCenter defaultCenter]
+      addObserver:self
+         selector:@selector(playerItemDidPlayToEndTime:)
+             name:AVPlayerItemDidPlayToEndTimeNotification
+           object:nil];
+  [[NSNotificationCenter defaultCenter]
+      addObserver:self
+         selector:@selector(restorePlay:)
+             name:UIApplicationDidBecomeActiveNotification
+           object:nil];
+})
 }
 
-- (void)addPlayerObservers
-{
-  [_player addObserver:self forKeyPath:STATUS_KEY options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nil];
-  [_player addObserver:self forKeyPath:CURR_STATUS_KEY options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nil];
-  [_player addObserver:self forKeyPath:CURR_BUFF_EMPTY_KEY options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nil];
-  [_player addObserver:self forKeyPath:CURR_CONTINUE_PLAY_KEY options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:nil];
+- (void)addPlayerObservers {
+  [_player addObserver:self
+            forKeyPath:STATUS_KEY
+               options:NSKeyValueObservingOptionNew |
+                       NSKeyValueObservingOptionInitial
+               context:nil];
+  [_player addObserver:self
+            forKeyPath:CURR_STATUS_KEY
+               options:NSKeyValueObservingOptionNew |
+                       NSKeyValueObservingOptionInitial
+               context:nil];
+  [_player addObserver:self
+            forKeyPath:CURR_BUFF_EMPTY_KEY
+               options:NSKeyValueObservingOptionNew |
+                       NSKeyValueObservingOptionInitial
+               context:nil];
+  [_player addObserver:self
+            forKeyPath:CURR_CONTINUE_PLAY_KEY
+               options:NSKeyValueObservingOptionNew |
+                       NSKeyValueObservingOptionInitial
+               context:nil];
 }
 
-- (void)removePlayerObservers
-{
+- (void)removePlayerObservers {
   [_player removeObserver:self forKeyPath:STATUS_KEY];
   [_player removeObserver:self forKeyPath:CURR_STATUS_KEY];
   [_player removeObserver:self forKeyPath:CURR_BUFF_EMPTY_KEY];
   [_player removeObserver:self forKeyPath:CURR_CONTINUE_PLAY_KEY];
 }
 
-- (void)layoutSubviews
-{
+- (void)layoutSubviews {
   [super layoutSubviews];
   [CATransaction begin];
   [CATransaction setAnimationDuration:0];
@@ -101,8 +116,7 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   [CATransaction commit];
 }
 
-- (void)didMoveToSuperview
-{
+- (void)didMoveToSuperview {
   if (!self.superview) {
     [_player pause];
   } else {
@@ -112,31 +126,27 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   }
 }
 
-- (void)removeFromSuperview
-{
+- (void)removeFromSuperview {
   [super removeFromSuperview];
 #ifndef RCT_NEW_ARCH_ENABLED
   [self _release];
 #endif
 }
 
-- (void)prepareForRecycle
-{
+- (void)prepareForRecycle {
   [_player pause];
 #ifdef RCT_NEW_ARCH_ENABLED
   _needReplay = YES;
 #endif
 }
 
-- (void)restorePlay:(NSNotification *)notification
-{
+- (void)restorePlay:(NSNotification *)notification {
   if (!_paused) {
     [_player play];
   }
 }
 
-- (void)_release
-{
+- (void)_release {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
   [self removePlayerObservers];
   if (_timeObserver) {
@@ -150,8 +160,7 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   _layer = nil;
 }
 
-- (void)playerItemDidPlayToEndTime:(NSNotification *)notification
-{
+- (void)playerItemDidPlayToEndTime:(NSNotification *)notification {
   if (_loop) {
     [self seekTo:0];
   } else {
@@ -159,13 +168,14 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   }
 }
 
-- (void)playItem:(AVPlayerItem *)item
-{
+- (void)playItem:(AVPlayerItem *)item {
   [_player replaceCurrentItemWithPlayerItem:item];
 }
 
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
-{
+- (void)observeValueForKeyPath:(NSString *)keyPath
+                      ofObject:(id)object
+                        change:(NSDictionary *)change
+                       context:(void *)context {
   if ([object isKindOfClass:[AVPlayer class]]) {
     AVPlayer *player = (AVPlayer *)object;
     if ([keyPath isEqualToString:STATUS_KEY]) {
@@ -205,13 +215,11 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 
 #pragma mark - params
 
-- (void)setLayerGravity:(CALayerContentsGravity)gravity
-{
+- (void)setLayerGravity:(CALayerContentsGravity)gravity {
   _layer.videoGravity = gravity;
 }
 
-- (void)setPaused:(BOOL)paused
-{
+- (void)setPaused:(BOOL)paused {
   _paused = paused;
   if (paused) {
     [_player pause];
@@ -220,74 +228,71 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   }
 }
 
-- (void)setSeek:(Float64)seek
-{
+- (void)setSeek:(Float64)seek {
   [self seekTo:seek];
 }
 
-- (void)setVolume:(float)volume
-{
+- (void)setVolume:(float)volume {
   [_player setVolume:volume];
 }
 
-- (void)setSpeed:(float)speed
-{
+- (void)setSpeed:(float)speed {
   [_player setRate:speed];
 }
 
-- (void)setMuted:(BOOL)muted
-{
+- (void)setMuted:(BOOL)muted {
   [_player setMuted:muted];
 }
 
-- (void)setLoop:(BOOL)loop
-{
+- (void)setLoop:(BOOL)loop {
   _loop = loop;
 }
 
-- (void)setProgressUpdateInterval:(int)ms
-{
+- (void)setProgressUpdateInterval:(int)ms {
   if (_timeObserver) {
     [_player removeTimeObserver:_timeObserver];
   }
   CMTime interval = CMTimeMakeWithSeconds((Float64)ms / 1000.0, NSEC_PER_SEC);
-  _timeObserver = [_player addPeriodicTimeObserverForInterval:interval queue:NULL usingBlock:^(CMTime time) {
-    CMTime duration = _player.currentItem.duration;
-    if (CMTIME_IS_INVALID(duration)) {
-      return;
-    }
-    CMTime currentTime = _player.currentTime;
-    Float64 currentTimeSec = CMTimeGetSeconds(currentTime);
-    Float64 durationSec = CMTimeGetSeconds(duration);
-    [self emitOnProgress:currentTimeSec duration:durationSec];
-  }];
+  _timeObserver = [_player
+      addPeriodicTimeObserverForInterval:interval
+                                   queue:NULL
+                              usingBlock:^(CMTime time) {
+                                CMTime duration = _player.currentItem.duration;
+                                if (CMTIME_IS_INVALID(duration)) {
+                                  return;
+                                }
+                                CMTime currentTime = _player.currentTime;
+                                Float64 currentTimeSec =
+                                    CMTimeGetSeconds(currentTime);
+                                Float64 durationSec =
+                                    CMTimeGetSeconds(duration);
+                                [self emitOnProgress:currentTimeSec
+                                            duration:durationSec];
+                              }];
 }
 
 #pragma mark - commands
 
-- (void)play
-{
+- (void)play {
   [_player play];
 }
 
-- (void)pause
-{
+- (void)pause {
   [_player pause];
 }
 
-- (void)seekTo:(Float64)time
-{
-  [_player seekToTime:CMTimeMakeWithSeconds(time, NSEC_PER_SEC) completionHandler:^(BOOL finished) {
-    if (finished) {
-      if (!_paused) {
-        [_player play];
-      }
-    }
-  }];
+- (void)seekTo:(Float64)time {
+  [_player seekToTime:CMTimeMakeWithSeconds(time, NSEC_PER_SEC)
+      completionHandler:^(BOOL finished) {
+        if (finished) {
+          if (!_paused) {
+            [_player play];
+          }
+        }
+      }];
 }
 
-- (void)stop
-{
+- (void)stop {
   [_player pause];
   [_player seekToTime:kCMTimeZero];
 }
@@ -296,15 +301,15 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
 
 #pragma mark - New Arch Impl
 
-+ (ComponentDescriptorProvider)componentDescriptorProvider
-{
-    return concreteComponentDescriptorProvider<ReactNativeVideoPlayerViewComponentDescriptor>();
++ (ComponentDescriptorProvider)componentDescriptorProvider {
+  return concreteComponentDescriptorProvider<
+      ReactNativeVideoPlayerViewComponentDescriptor>();
 }
 
-- (instancetype)initWithFrame:(CGRect)frame
-{
+- (instancetype)initWithFrame:(CGRect)frame {
   if (self = [super initWithFrame:frame]) {
-    static const auto defaultProps = std::make_shared<const ReactNativeVideoPlayerViewProps>();
+    static const auto defaultProps =
+        std::make_shared<const ReactNativeVideoPlayerViewProps>();
     _props = defaultProps;
 
     _view = [[UIView alloc] initWithFrame:frame];
@@ -317,71 +322,76 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   return self;
 }
 
-- (void)updateProps:(Props::Shared const &)props oldProps:(Props::Shared const &)oldProps
-{
-    const auto &oldViewProps = *std::static_pointer_cast<ReactNativeVideoPlayerViewProps const>(_props);
-    const auto &newViewProps = *std::static_pointer_cast<ReactNativeVideoPlayerViewProps const>(props);
+- (void)updateProps:(Props::Shared const &)props
+           oldProps:(Props::Shared const &)oldProps {
+  const auto &oldViewProps =
+      *std::static_pointer_cast<ReactNativeVideoPlayerViewProps const>(_props);
+  const auto &newViewProps =
+      *std::static_pointer_cast<ReactNativeVideoPlayerViewProps const>(props);
 
-    if (oldViewProps.source.uri != newViewProps.source.uri) {
-      NSString * uri = [[NSString alloc] initWithUTF8String: newViewProps.source.uri.c_str()];
-      NSDictionary *headers = nil;
-      if (newViewProps.source.headers.isObject()) {
-        headers = [NSMutableDictionary new];
-        for (auto &pair : newViewProps.source.headers.items()) {
-          NSString *key = [[NSString alloc] initWithUTF8String: pair.first.c_str()];
-          NSString *value = [[NSString alloc] initWithUTF8String: pair.second.c_str()];
-          [headers setValue:value forKey:key];
-        }
-      }
-      [self playItem:[Utils sourceToPlayItem:uri headers:headers]];
-    } else if (_needReplay) {
-      [self seekTo:0];
-      _needReplay = NO;
-    }
-
-    if (oldViewProps.paused != newViewProps.paused) {
-      [self setPaused:newViewProps.paused];
-    }
-
-    if (oldViewProps.seek != newViewProps.seek) {
-      [self setSeek:newViewProps.seek];
-    }
-
-    if (oldViewProps.volume != newViewProps.volume) {
-      [self setVolume:newViewProps.volume];
-    }
-
-    if (oldViewProps.speed != newViewProps.speed) {
-      [self setSpeed:newViewProps.speed];
-    }
-
-    if (oldViewProps.muted != newViewProps.muted) {
-      [self setMuted:newViewProps.muted];
-    }
-
-    if (oldViewProps.loop != newViewProps.loop) {
-      [self setLoop:newViewProps.loop];
-    }
-
-    if (oldViewProps.resizeMode != newViewProps.resizeMode) {
-      if (newViewProps.resizeMode == "stretch") {
-        [self setLayerGravity:AVLayerVideoGravityResize];
-      } else if (newViewProps.resizeMode == "cover") {
-        [self setLayerGravity:AVLayerVideoGravityResizeAspectFill];
-      } else {
-        [self setLayerGravity:AVLayerVideoGravityResizeAspect];
+  if (oldViewProps.source.uri != newViewProps.source.uri) {
+    NSString *uri =
+        [[NSString alloc] initWithUTF8String:newViewProps.source.uri.c_str()];
+    NSDictionary *headers = nil;
+    if (newViewProps.source.headers.isObject()) {
+      headers = [NSMutableDictionary new];
+      for (auto &pair : newViewProps.source.headers.items()) {
+        NSString *key =
+            [[NSString alloc] initWithUTF8String:pair.first.c_str()];
+        NSString *value =
+            [[NSString alloc] initWithUTF8String:pair.second.c_str()];
+        [headers setValue:value forKey:key];
       }
     }
+    [self playItem:[Utils sourceToPlayItem:uri headers:headers]];
+  } else if (_needReplay) {
+    [self seekTo:0];
+    _needReplay = NO;
+  }
 
-    if (oldViewProps.progressUpdateInterval != newViewProps.progressUpdateInterval) {
-      [self setProgressUpdateInterval:newViewProps.progressUpdateInterval];
+  if (oldViewProps.paused != newViewProps.paused) {
+    [self setPaused:newViewProps.paused];
+  }
+
+  if (oldViewProps.seek != newViewProps.seek) {
+    [self setSeek:newViewProps.seek];
+  }
+
+  if (oldViewProps.volume != newViewProps.volume) {
+    [self setVolume:newViewProps.volume];
+  }
+
+  if (oldViewProps.speed != newViewProps.speed) {
+    [self setSpeed:newViewProps.speed];
+  }
+
+  if (oldViewProps.muted != newViewProps.muted) {
+    [self setMuted:newViewProps.muted];
+  }
+
+  if (oldViewProps.loop != newViewProps.loop) {
+    [self setLoop:newViewProps.loop];
+  }
+
+  if (oldViewProps.resizeMode != newViewProps.resizeMode) {
+    if (newViewProps.resizeMode == "stretch") {
+      [self setLayerGravity:AVLayerVideoGravityResize];
+    } else if (newViewProps.resizeMode == "cover") {
+      [self setLayerGravity:AVLayerVideoGravityResizeAspectFill];
+    } else {
+      [self setLayerGravity:AVLayerVideoGravityResizeAspect];
     }
+  }
 
-    [super updateProps:props oldProps:oldProps];
+  if (oldViewProps.progressUpdateInterval !=
+      newViewProps.progressUpdateInterval) {
+    [self setProgressUpdateInterval:newViewProps.progressUpdateInterval];
+  }
+
+  [super updateProps:props oldProps:oldProps];
 }
 
-- (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args
-{
+- (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args {
   if ([commandName isEqualToString:@"play"]) {
     [self play];
   } else if ([commandName isEqualToString:@"pause"]) {
@@ -393,72 +403,71 @@ static NSString *const CURR_CONTINUE_PLAY_KEY = @"currentItem.playbackLikelyToKe
   }
 }
 
-- (void)emitOnReady
-{
+- (void)emitOnReady {
   if (_eventEmitter) {
-    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
-      ->onReadyForDisplay(ReactNativeVideoPlayerViewEventEmitter::OnReadyForDisplay{});
+    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
+        _eventEmitter)
+        ->onReadyForDisplay(
+            ReactNativeVideoPlayerViewEventEmitter::OnReadyForDisplay{});
   }
 }
 
-- (void)emitOnLoad
-{
+- (void)emitOnLoad {
   if (_eventEmitter) {
-    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
-      ->onLoad(ReactNativeVideoPlayerViewEventEmitter::OnLoad{});
+    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
+        _eventEmitter)
+        ->onLoad(ReactNativeVideoPlayerViewEventEmitter::OnLoad{});
   }
 }
 
-- (void)emitOnError:(NSError *)error
-{
+- (void)emitOnError:(NSError *)error {
   if (_eventEmitter) {
-    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
-      ->onError(ReactNativeVideoPlayerViewEventEmitter::OnError{
-        .message = error.localizedDescription.UTF8String,
-      });
+    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
+        _eventEmitter)
+        ->onError(ReactNativeVideoPlayerViewEventEmitter::OnError{
+            .message = error.localizedDescription.UTF8String,
+        });
   }
 }
 
-- (void)emitOnEnd
-{
+- (void)emitOnEnd {
   if (_eventEmitter) {
-    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
-      ->onEnd(ReactNativeVideoPlayerViewEventEmitter::OnEnd{});
+    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
+        _eventEmitter)
+        ->onEnd(ReactNativeVideoPlayerViewEventEmitter::OnEnd{});
   }
 }
 
-- (void)emitOnProgress:(Float64)currentTime duration:(Float64)duration
-{
+- (void)emitOnProgress:(Float64)currentTime duration:(Float64)duration {
   if (_eventEmitter) {
-    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
-      ->onProgress(ReactNativeVideoPlayerViewEventEmitter::OnProgress{
-        .currentTime = currentTime,
-        .duration = duration,
-      });
+    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
+        _eventEmitter)
+        ->onProgress(ReactNativeVideoPlayerViewEventEmitter::OnProgress{
+            .currentTime = currentTime,
+            .duration = duration,
+        });
   }
 }
 
-- (void)emitOnBuffer:(BOOL)buffering
-{
+- (void)emitOnBuffer:(BOOL)buffering {
   if (_eventEmitter) {
-    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(_eventEmitter)
-      ->onBuffer(ReactNativeVideoPlayerViewEventEmitter::OnBuffer{
-        .isBuffering = buffering,
-      });
+    std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
+        _eventEmitter)
+        ->onBuffer(ReactNativeVideoPlayerViewEventEmitter::OnBuffer{
+            .isBuffering = buffering,
+        });
   }
 }
 
-Class<RCTComponentViewProtocol> ReactNativeVideoPlayerViewCls(void)
-{
-    return ReactNativeVideoPlayerView.class;
+Class<RCTComponentViewProtocol> ReactNativeVideoPlayerViewCls(void) {
+  return ReactNativeVideoPlayerView.class;
 }
 
 #else
 
 #pragma mark - Old Arch Impl
 
-- (instancetype)initWithBridge:(RCTBridge *)bridge
-{
+- (instancetype)initWithBridge:(RCTBridge *)bridge {
   if ((self = [super init])) {
     _bridge = bridge;
     [self initCommon:self];
@@ -466,18 +475,17 @@ Class<RCTComponentViewProtocol> ReactNativeVideoPlayerViewCls(void)
   return self;
 }
 
-- (void)setSource:(NSDictionary *)source
-{
+- (void)setSource:(NSDictionary *)source {
   if (source == nil) {
     return;
   }
-  NSString * uri = [[NSString alloc] initWithUTF8String: [source[@"uri"] UTF8String]];
+  NSString *uri =
+      [[NSString alloc] initWithUTF8String:[source[@"uri"] UTF8String]];
   NSDictionary *headers = source[@"headers"];
   [self playItem:[Utils sourceToPlayItem:uri headers:headers]];
 }
 
-- (void)setResizeMode:(NSString *)resizeMode
-{
+- (void)setResizeMode:(NSString *)resizeMode {
   if ([resizeMode isEqualToString:@"stretch"]) {
     [self setLayerGravity:AVLayerVideoGravityResize];
   } else if ([resizeMode isEqualToString:@"cover"]) {
@@ -487,51 +495,45 @@ Class<RCTComponentViewProtocol> ReactNativeVideoPlayerViewCls(void)
   }
 }
 
-- (void)emitOnReady
-{
+- (void)emitOnReady {
   if (self.onReadyForDisplay) {
     self.onReadyForDisplay(nil);
   }
 }
 
-- (void)emitOnLoad
-{
+- (void)emitOnLoad {
   if (self.onLoad) {
     self.onLoad(nil);
   }
 }
 
-- (void)emitOnBuffer:(BOOL)buffering
-{
+- (void)emitOnBuffer:(BOOL)buffering {
   if (self.onBuffer) {
     self.onBuffer(@{
-      @"isBuffering": @(buffering),
+      @"isBuffering" : @(buffering),
     });
   }
 }
 
-- (void)emitOnError:(NSError *)error
-{
+- (void)emitOnError:(NSError *)error {
   if (self.onError) {
     self.onError(@{
-      @"message": error.localizedDescription,
+      @"message" : error.localizedDescription,
     });
   }
 }
 
-- (void)emitOnEnd
-{
+- (void)emitOnEnd {
   if (self.onEnd) {
     self.onEnd(nil);
   }
 }
 
-- (void)emitOnProgress:(Float64)currentTime duration:(Float64)duration
-{
+- (void)emitOnProgress:(Float64)currentTime duration:(Float64)duration {
   if (self.onProgress) {
     self.onProgress(@{
-      @"currentTime": @(currentTime),
-      @"duration": @(duration),
+      @"currentTime" : @(currentTime),
+      @"duration" : @(duration),
     });
   }
 }
