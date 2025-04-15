@@ -41,10 +41,12 @@ export default function App() {
             uri: 'https://www.w3schools.com/html/mov_bbb.mp4',
           }}
           style={styles.box}
-          onReadyForDisplay={() => console.log(`[ready] ${performance.now()}`)}
-          onLoad={() => console.log(`[load] ${performance.now()}`)}
+          onReadyForDisplay={() =>
+            console.log(`[vid-1] [ready] ${performance.now()}`)
+          }
+          onLoad={() => console.log(`[vid-1] [load] ${performance.now()}`)}
           onProgress={setInfo}
-          onEnd={() => console.log(`[end] ${performance.now()}`)}
+          onEnd={() => console.log(`[vid-1] [end] ${performance.now()}`)}
           onError={(err) => console.error(err)}
         />
       )}
@@ -85,6 +87,25 @@ export default function App() {
         onPress={() => {
           setShowVideo(false);
         }}
+      />
+      <VideoPlayer
+        source={{
+          uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+        }}
+        style={styles.box}
+        muted
+        onReadyForDisplay={() =>
+          console.log(`[vid-2] [ready] ${performance.now()}`)
+        }
+        onLoad={() => console.log(`[vid-2] [load] ${performance.now()}`)}
+        onProgress={({ currentTime, duration }) =>
+          console.log(`[vid-2] [progress] ${currentTime} / ${duration}`)
+        }
+        onBuffer={({ isBuffering }) =>
+          console.log(`[vid-2] [buffer] ${isBuffering}`)
+        }
+        onEnd={() => console.log(`[vid-2] [end] ${performance.now()}`)}
+        onError={(err) => console.error(err)}
       />
     </View>
   );
