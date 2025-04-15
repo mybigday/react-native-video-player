@@ -29,6 +29,9 @@ import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.uimanager.UIManagerModule
+import com.facebook.react.uimanager.UIManagerHelper
+import com.facebook.react.uimanager.events.EventDispatcher
+import com.facebook.react.uimanager.events.Event
 
 class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureView.SurfaceTextureListener, LifecycleEventListener,
   OnPreparedListener, OnCompletionListener, OnErrorListener, OnInfoListener, OnSeekCompleteListener, OnVideoSizeChangedListener {
@@ -42,6 +45,8 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     STOPPED,
     COMPLETED
   }
+
+  private val surfaceId: Int
 
   protected var mUrl: String? = null
   protected var mHeaders: Map<String, String>? = null
@@ -76,6 +81,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     attrs,
     defStyleAttr
   ) {
+    surfaceId = UIManagerHelper.getSurfaceId(context)
     val aspectParams = FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
     aspectParams.gravity = Gravity.CENTER
 
@@ -225,10 +231,14 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     if (player == null || mBackgroundPaused) {
       return
     }
-    fireEvent("progress", Arguments.createMap().apply {
-      putDouble("currentTime", (player?.currentPosition ?: 0).toDouble() / 1000)
-      putDouble("duration", (player?.duration ?: 0).toDouble() / 1000)
-    })
+    fireEvent(
+      ReactVideoProgressEvent(
+        surfaceId,
+        id,
+        (player?.currentPosition ?: 0).toDouble() / 1000,
+        (player?.duration ?: 0).toDouble() / 1000
+      )
+    )
     if (player?.isPlaying == true) {
       val nextDelay = Math.min(
         mProgressUpdateInterval,
@@ -371,10 +381,8 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     mProgressUpdateInterval = (interval ?: 0).toLong()
   }
 
-  private fun fireEvent(name: String, event: WritableMap?) {
-    (context as ReactContext)
-      .getNativeModule(UIManagerModule::class.java)
-      ?.receiveEvent(id, name, event ?: Arguments.createMap())
+  private fun fireEvent(event: Event<*>) {
+    UIManagerHelper.getEventDispatcherForReactTag((context as ReactContext), id)?.dispatchEvent(event)
   }
 
   override fun onPrepared(mp: MediaPlayer?) {
@@ -385,7 +393,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     mp.setPlaybackParams(mPlaybackParams)
     mp.setLooping(mLoop)
     mp.setVolume(volume, volume)
-    fireEvent("ready", null)
+    fireEvent(ReactVideoReadyEvent(surfaceId, id))
     if (mSeekTo > 0) {
       if (!mPaused) {
         mState = State.PLAYING
@@ -406,7 +414,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
 
   override fun onCompletion(mp: MediaPlayer?) {
     removeCallbacks(updateProgressTask)
-    fireEvent("end", null)
+    fireEvent(ReactVideoEndEvent(surfaceId, id))
     mState = State.COMPLETED
   }
 
@@ -419,34 +427,22 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     } else {
       when (extra) {
         MediaPlayer.MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK -> {
-          fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK")
-          })
+          fireEvent(ReactVideoErrorEvent(surfaceId, id, "MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK"))
         }
         MediaPlayer.MEDIA_ERROR_IO -> {
-          fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_IO")
-          })
+          fireEvent(ReactVideoErrorEvent(surfaceId, id, "MEDIA_ERROR_IO"))
         }
         MediaPlayer.MEDIA_ERROR_MALFORMED -> {
-          fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_MALFORMED")
-          })
+          fireEvent(ReactVideoErrorEvent(surfaceId, id, "MEDIA_ERROR_MALFORMED"))
         }
         MediaPlayer.MEDIA_ERROR_UNSUPPORTED -> {
-          fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_UNSUPPORTED")
-          })
+          fireEvent(ReactVideoErrorEvent(surfaceId, id, "MEDIA_ERROR_UNSUPPORTED"))
         }
         MediaPlayer.MEDIA_ERROR_TIMED_OUT -> {
-          fireEvent("error", Arguments.createMap().apply {
-            putString("message", "MEDIA_ERROR_TIMED_OUT")
-          })
+          fireEvent(ReactVideoErrorEvent(surfaceId, id, "MEDIA_ERROR_TIMED_OUT"))
         }
         else -> {
-          fireEvent("error", Arguments.createMap().apply {
-            putString("error", "MEDIA_ERROR_UNKNOWN")
-          })
+          fireEvent(ReactVideoErrorEvent(surfaceId, id, "MEDIA_ERROR_UNKNOWN"))
         }
       }
     }
@@ -456,17 +452,13 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
   override fun onInfo(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
     when (what) {
       MediaPlayer.MEDIA_INFO_BUFFERING_START -> {
-        fireEvent("buffering", Arguments.createMap().apply {
-          putBoolean("isBuffering", true)
-        })
+        fireEvent(ReactVideoBufferEvent(surfaceId, id, true))
       }
       MediaPlayer.MEDIA_INFO_BUFFERING_END -> {
-        fireEvent("buffering", Arguments.createMap().apply {
-          putBoolean("isBuffering", false)
-        })
+        fireEvent(ReactVideoBufferEvent(surfaceId, id, false))
       }
       MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
-        fireEvent("load", null)
+        fireEvent(ReactVideoLoadEvent(surfaceId, id))
         updateProgress()
       }
     }
