@@ -160,6 +160,10 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 }
 
 - (void)playerItemDidPlayToEndTime:(NSNotification *)notification {
+  AVPlayerItem *item = notification.object;
+  if (item != _player.currentItem) {
+    return;
+  }
   if (_loop) {
     [self seekTo:0];
   } else {
