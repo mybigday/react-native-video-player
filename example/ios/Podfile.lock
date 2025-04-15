@@ -62,7 +62,7 @@ PODS:
     - FlipperKit/Core
     - FlipperKit/FlipperKitNetworkPlugin
   - fmt (6.2.1)
-  - fugood-react-native-video-player (0.5.0):
+  - fugood-react-native-video-player (0.5.4):
     - hermes-engine
     - RCT-Folly (= 2021.07.22.00)
     - RCTRequired
@@ -1269,7 +1269,7 @@ SPEC CHECKSUMS:
   Flipper-PeerTalk: 116d8f857dc6ef55c7a5a75ea3ceaafe878aadc9
   FlipperKit: 2efad7007d6745a3f95e4034d547be637f89d3f6
   fmt: ff9d55029c625d3757ed641535fd4a75fedc7ce9
-  fugood-react-native-video-player: db74bbb40ef46d8f3557b5ccdd9667dfaad7f09b
+  fugood-react-native-video-player: 1de116f87a49d9ebb86e654d758389c70270c622
   glog: 04b94705f318337d7ead9e6d17c019bd9b1f6b1b
   hermes-engine: 81191603c4eaa01f5e4ae5737a9efcf64756c7b2
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
@@ -1316,4 +1316,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: cde23d66d797654bee025d23b14b4c9c1a333b19
 
-COCOAPODS: 1.11.3
+COCOAPODS: 1.15.2
