@@ -214,8 +214,22 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     }
     if (mUrl?.isEmpty() == false) {
       mState = State.PREPARING
-      player!!.setDataSource(context, Uri.parse(mUrl), mHeaders)
-      player!!.prepareAsync()
+      try {
+        player!!.setDataSource(context, Uri.parse(mUrl), mHeaders)
+      } catch (e: Exception) {
+        Log.e("ReactNativeVideoPlayerView", "Failed to set data source: ${e.message}", e)
+        mState = State.IDLE
+        fireEvent(ReactVideoErrorEvent(surfaceId, id, "MEDIA_ERROR_INVALID_SOURCE"))
+        return
+      }
+      try {
+        player!!.prepareAsync()
+      } catch (e: Exception) {
+        Log.e("ReactNativeVideoPlayerView", "Failed to prepare: ${e.message}", e)
+        mState = State.IDLE
+        fireEvent(ReactVideoErrorEvent(surfaceId, id, "MEDIA_ERROR_PREPARE_FAILED"))
+        return
+      }
       player!!.setOnPreparedListener(this)
       player!!.setOnCompletionListener(this)
       player!!.setOnErrorListener(this)
@@ -394,6 +408,7 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
     mp.setLooping(mLoop)
     mp.setVolume(volume, volume)
     fireEvent(ReactVideoReadyEvent(surfaceId, id))
+    fireEvent(ReactVideoLoadEvent(surfaceId, id))
     if (mSeekTo > 0) {
       if (!mPaused) {
         mState = State.PLAYING
@@ -458,7 +473,6 @@ class ReactNativeVideoPlayerView : FrameLayout, SurfaceHolder.Callback, TextureV
         fireEvent(ReactVideoBufferEvent(surfaceId, id, false))
       }
       MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
-        fireEvent(ReactVideoLoadEvent(surfaceId, id))
         updateProgress()
       }
     }
