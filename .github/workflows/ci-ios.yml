@@ -61,6 +61,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cocoapods-
 
+      - name: Fix boost download URL
+        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
+        run: |
+          # The JFrog artifactory URL for boost is broken/redirecting incorrectly
+          # Use the official archives.boost.io mirror instead
+          BOOST_PODSPEC="example/node_modules/react-native/third-party-podspecs/boost.podspec"
+          if [ -f "$BOOST_PODSPEC" ]; then
+            sed -i '' 's|boostorg.jfrog.io/artifactory/main/release|archives.boost.io/release|g' "$BOOST_PODSPEC"
+          fi
+
       - name: Install cocoapods
         if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
