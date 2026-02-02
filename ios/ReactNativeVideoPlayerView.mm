@@ -44,6 +44,9 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
   AVPlayer *_player;
   AVPlayerLayer *_layer;
   id _timeObserver;
+  BOOL _didRelease;
+  NSString *_currentUri;
+  NSDictionary *_currentHeaders;
 }
 
 #pragma mark - Common
@@ -56,6 +59,7 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 }
 
 - (void)initCommon:(UIView *)view {
+  _didRelease = NO;
   _player = [[AVPlayer alloc] init];
   _layer = [AVPlayerLayer playerLayerWithPlayer:_player];
   _layer.videoGravity = AVLayerVideoGravityResizeAspect;
@@ -101,10 +105,17 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 }
 
 - (void)removePlayerObservers {
-  [_player removeObserver:self forKeyPath:STATUS_KEY];
-  [_player removeObserver:self forKeyPath:CURR_STATUS_KEY];
-  [_player removeObserver:self forKeyPath:CURR_BUFF_EMPTY_KEY];
-  [_player removeObserver:self forKeyPath:CURR_CONTINUE_PLAY_KEY];
+  if (!_player) {
+    return;
+  }
+  @try {
+    [_player removeObserver:self forKeyPath:STATUS_KEY];
+    [_player removeObserver:self forKeyPath:CURR_STATUS_KEY];
+    [_player removeObserver:self forKeyPath:CURR_BUFF_EMPTY_KEY];
+    [_player removeObserver:self forKeyPath:CURR_CONTINUE_PLAY_KEY];
+  } @catch (NSException *exception) {
+    // Observers might already be removed if cleanup ran earlier.
+  }
 }
 
 - (void)layoutSubviews {
@@ -135,7 +146,14 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 - (void)prepareForRecycle {
   [_player pause];
 #ifdef RCT_NEW_ARCH_ENABLED
-  _needReplay = YES;
+  if (_player.currentItem) {
+    [_player.currentItem cancelPendingSeeks];
+  }
+  [_player replaceCurrentItemWithPlayerItem:nil];
+  if (_layer) {
+    _layer.contents = nil;
+  }
+  _needReplay = (_currentUri != nil);
 #endif
 }
 
@@ -146,16 +164,24 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 }
 
 - (void)_release {
+  if (_didRelease) {
+    return;
+  }
+  _didRelease = YES;
   [[NSNotificationCenter defaultCenter] removeObserver:self];
   [self removePlayerObservers];
-  if (_timeObserver) {
+  if (_player && _timeObserver) {
     [_player removeTimeObserver:_timeObserver];
     _timeObserver = nil;
   }
-  [_player pause];
-  [_player replaceCurrentItemWithPlayerItem:nil];
+  if (_player) {
+    [_player pause];
+    [_player replaceCurrentItemWithPlayerItem:nil];
+  }
+  if (_layer) {
+    [_layer removeFromSuperlayer];
+  }
   _player = nil;
-  [_layer removeFromSuperlayer];
   _layer = nil;
 }
 
@@ -173,6 +199,20 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 
 - (void)playItem:(AVPlayerItem *)item {
   [_player replaceCurrentItemWithPlayerItem:item];
+}
+
+- (void)reloadCurrentSource {
+  if (!_currentUri) {
+    return;
+  }
+  NSDictionary *headersCopy =
+      _currentHeaders ? [[NSDictionary alloc] initWithDictionary:_currentHeaders]
+                      : nil;
+  AVPlayerItem *item = [Utils sourceToPlayItem:_currentUri headers:headersCopy];
+  if (!item) {
+    return;
+  }
+  [self playItem:item];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath
@@ -251,26 +291,55 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
   _loop = loop;
 }
 
+- (void)setSource:(NSDictionary *)source {
+  if (source == nil) {
+    return;
+  }
+  NSString *uri =
+      [[NSString alloc] initWithUTF8String:[source[@"uri"] UTF8String]];
+  NSDictionary *headers = source[@"headers"];
+  _currentUri = uri;
+  _currentHeaders = headers ? [[NSDictionary alloc] initWithDictionary:headers]
+                            : nil;
+  [self playItem:[Utils sourceToPlayItem:uri headers:headers]];
+}
+
+- (void)setResizeMode:(NSString *)resizeMode {
+  if ([resizeMode isEqualToString:@"stretch"]) {
+    [self setLayerGravity:AVLayerVideoGravityResize];
+  } else if ([resizeMode isEqualToString:@"cover"]) {
+    [self setLayerGravity:AVLayerVideoGravityResizeAspectFill];
+  } else {
+    [self setLayerGravity:AVLayerVideoGravityResizeAspect];
+  }
+}
+
 - (void)setProgressUpdateInterval:(int)ms {
   if (_timeObserver) {
     [_player removeTimeObserver:_timeObserver];
   }
   CMTime interval = CMTimeMakeWithSeconds((Float64)ms / 1000.0, NSEC_PER_SEC);
+  __weak __typeof(self) weakSelf = self;
   _timeObserver = [_player
       addPeriodicTimeObserverForInterval:interval
                                    queue:NULL
                               usingBlock:^(CMTime time) {
-                                CMTime duration = _player.currentItem.duration;
+                                __strong __typeof(weakSelf) strongSelf = weakSelf;
+                                if (!strongSelf) {
+                                  return;
+                                }
+                                AVPlayer *player = strongSelf->_player;
+                                CMTime duration = player.currentItem.duration;
                                 if (CMTIME_IS_INVALID(duration)) {
                                   return;
                                 }
-                                CMTime currentTime = _player.currentTime;
+                                CMTime currentTime = player.currentTime;
                                 Float64 currentTimeSec =
                                     CMTimeGetSeconds(currentTime);
                                 Float64 durationSec =
                                     CMTimeGetSeconds(duration);
-                                [self emitOnProgress:currentTimeSec
-                                            duration:durationSec];
+                                [strongSelf emitOnProgress:currentTimeSec
+                                                  duration:durationSec];
                               }];
 }
 
@@ -346,9 +415,16 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
         [headers setValue:value forKey:key];
       }
     }
+    _currentUri = uri;
+    _currentHeaders = headers ? [[NSDictionary alloc] initWithDictionary:headers]
+                              : nil;
     [self playItem:[Utils sourceToPlayItem:uri headers:headers]];
   } else if (_needReplay) {
-    [self seekTo:0];
+    if (_player.currentItem) {
+      [self seekTo:0];
+    } else {
+      [self reloadCurrentSource];
+    }
     _needReplay = NO;
   }
 
@@ -407,6 +483,12 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 }
 
 - (void)emitOnReady {
+  // Try callback block first (for Legacy View Manager Interop)
+  if (self.onReadyForDisplay) {
+    self.onReadyForDisplay(nil);
+    return;
+  }
+  // Fall back to event emitter (for pure Fabric)
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
         _eventEmitter)
@@ -416,6 +498,10 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 }
 
 - (void)emitOnLoad {
+  if (self.onLoad) {
+    self.onLoad(nil);
+    return;
+  }
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
         _eventEmitter)
@@ -424,6 +510,12 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 }
 
 - (void)emitOnError:(NSError *)error {
+  if (self.onError) {
+    self.onError(@{
+      @"message" : error.localizedDescription ?: @"Unknown error",
+    });
+    return;
+  }
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
         _eventEmitter)
@@ -434,6 +526,10 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 }
 
 - (void)emitOnEnd {
+  if (self.onEnd) {
+    self.onEnd(nil);
+    return;
+  }
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
         _eventEmitter)
@@ -442,6 +538,13 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 }
 
 - (void)emitOnProgress:(Float64)currentTime duration:(Float64)duration {
+  if (self.onProgress) {
+    self.onProgress(@{
+      @"currentTime" : @(currentTime),
+      @"duration" : @(duration),
+    });
+    return;
+  }
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
         _eventEmitter)
@@ -453,6 +556,12 @@ static NSString *const CURR_CONTINUE_PLAY_KEY =
 }
 
 - (void)emitOnBuffer:(BOOL)buffering {
+  if (self.onBuffer) {
+    self.onBuffer(@{
+      @"isBuffering" : @(buffering),
+    });
+    return;
+  }
   if (_eventEmitter) {
     std::dynamic_pointer_cast<const ReactNativeVideoPlayerViewEventEmitter>(
         _eventEmitter)
@@ -478,24 +587,8 @@ Class<RCTComponentViewProtocol> ReactNativeVideoPlayerViewCls(void) {
   return self;
 }
 
-- (void)setSource:(NSDictionary *)source {
-  if (source == nil) {
-    return;
-  }
-  NSString *uri =
-      [[NSString alloc] initWithUTF8String:[source[@"uri"] UTF8String]];
-  NSDictionary *headers = source[@"headers"];
-  [self playItem:[Utils sourceToPlayItem:uri headers:headers]];
-}
-
-- (void)setResizeMode:(NSString *)resizeMode {
-  if ([resizeMode isEqualToString:@"stretch"]) {
-    [self setLayerGravity:AVLayerVideoGravityResize];
-  } else if ([resizeMode isEqualToString:@"cover"]) {
-    [self setLayerGravity:AVLayerVideoGravityResizeAspectFill];
-  } else {
-    [self setLayerGravity:AVLayerVideoGravityResizeAspect];
-  }
+- (void)dealloc {
+  [self _release];
 }
 
 - (void)emitOnReady {
