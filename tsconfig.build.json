@@ -1,5 +1,9 @@
-
 {
   "extends": "./tsconfig",
-  "exclude": ["example"]
+  // Whitelist rather than exclude the example apps. `exclude` only decides
+  // which files are roots, and the examples re-export each other's App, so
+  // TypeScript follows those imports back in and emits their declarations into
+  // `lib/` regardless — and a newly added example is easy to forget.
+  "include": ["src"],
+  "exclude": ["src/**/__tests__"]
 }

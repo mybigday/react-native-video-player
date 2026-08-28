@@ -2,88 +2,122 @@ package com.fugood.reactnativevideoplayer
 
 import android.content.Context
 import android.util.AttributeSet
-import android.view.View.MeasureSpec
 import android.widget.FrameLayout
-import android.util.Log
+import kotlin.math.abs
 
-class AspectFrameLayout: FrameLayout {
-  constructor(context: Context) : super(context)
-  constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
-  constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(
-    context,
-    attrs,
-    defStyleAttr
-  )
+/**
+ * Sizes its children to the video's aspect ratio.
+ *
+ * React Native does not lay out views added from native code, so after every
+ * [requestLayout] the measure/layout pass has to be re-run manually — but only
+ * once per frame, otherwise the layout loops.
+ */
+class AspectFrameLayout
+@JvmOverloads
+constructor(
+  context: Context,
+  attrs: AttributeSet? = null,
+  defStyleAttr: Int = 0,
+) : FrameLayout(context, attrs, defStyleAttr) {
 
   enum class ResizeMode {
     CONTAIN,
     COVER,
-    STRETCH
+    STRETCH;
+
+    companion object {
+      /** Falls back to [CONTAIN] for unknown values instead of throwing. */
+      fun from(value: String?): ResizeMode =
+        values().firstOrNull { it.name.equals(value, ignoreCase = true) } ?: CONTAIN
+    }
   }
 
-  protected var mResizeMode = ResizeMode.CONTAIN
-  protected var mAspectRatio = -1.0f
+  private var relayoutScheduled = false
 
-  var resizeMode: ResizeMode
-    get() = mResizeMode
+  private val relayoutRunnable = Runnable {
+    relayoutScheduled = false
+    measure(
+      MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+      MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY),
+    )
+    layout(left, top, right, bottom)
+  }
+
+  var resizeMode: ResizeMode = ResizeMode.CONTAIN
     set(value) {
-      if (value != mResizeMode) {
-        mResizeMode = value
+      if (value != field) {
+        field = value
         requestLayout()
       }
     }
 
-  var aspectRatio: Float
-    get() = mAspectRatio
+  /** Width / height of the video, or a non-positive value when unknown. */
+  var aspectRatio: Float = -1.0f
     set(value) {
-      if (value < 0) {
-        throw IllegalArgumentException()
-      }
-      if (value != mAspectRatio) {
-        mAspectRatio = value
+      val sanitized = if (value.isFinite() && value > 0f) value else -1.0f
+      if (sanitized != field) {
+        field = sanitized
         requestLayout()
       }
     }
 
   override fun requestLayout() {
     super.requestLayout()
-    post {
-      measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
-        MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY))
-      layout(left, top, right, bottom)
+    if (!relayoutScheduled && width > 0 && height > 0) {
+      relayoutScheduled = true
+      post(relayoutRunnable)
     }
+  }
+
+  override fun onDetachedFromWindow() {
+    removeCallbacks(relayoutRunnable)
+    relayoutScheduled = false
+    super.onDetachedFromWindow()
   }
 
   override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
     val width = MeasureSpec.getSize(widthMeasureSpec)
     val height = MeasureSpec.getSize(heightMeasureSpec)
-    val viewRatio = width.toFloat() / height.toFloat()
-    val aspectDeformation = mAspectRatio / viewRatio - 1
-    if (mAspectRatio <= 0 || Math.abs(aspectDeformation) <= 0.01 || mResizeMode == ResizeMode.STRETCH) {
+
+    if (aspectRatio <= 0f || width == 0 || height == 0 ||
+      resizeMode == ResizeMode.STRETCH
+    ) {
       super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-    } else {
-      var newWidth: Int = width
-      var newHeight: Int = height
-      when (mResizeMode) {
-        ResizeMode.COVER -> {
-          newWidth = (height.toFloat() * mAspectRatio).toInt()
-          if (newWidth < width) {
-            val scaleFactor = width.toFloat() / newWidth
-            newWidth = (width.toFloat() * scaleFactor).toInt()
-            newHeight = (height.toFloat() * scaleFactor).toInt()
-          }
-        }
-        else -> {
-          if (aspectDeformation > 0) {
-            newHeight = (width.toFloat() / mAspectRatio).toInt()
-          } else {
-            newWidth = (height.toFloat() * mAspectRatio).toInt()
-          }
-        }
-      }
-      val newWidthMeasureSpec = MeasureSpec.makeMeasureSpec(newWidth, MeasureSpec.EXACTLY)
-      val newHeightMeasureSpec = MeasureSpec.makeMeasureSpec(newHeight, MeasureSpec.EXACTLY)
-      super.onMeasure(newWidthMeasureSpec, newHeightMeasureSpec)
+      return
     }
+
+    val viewRatio = width.toFloat() / height.toFloat()
+    val aspectDeformation = aspectRatio / viewRatio - 1f
+    if (abs(aspectDeformation) <= MAX_ASPECT_DEFORMATION) {
+      super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+      return
+    }
+
+    var newWidth = width
+    var newHeight = height
+    when (resizeMode) {
+      ResizeMode.COVER ->
+        if (aspectDeformation > 0) {
+          newWidth = (height * aspectRatio).toInt()
+        } else {
+          newHeight = (width / aspectRatio).toInt()
+        }
+      else ->
+        if (aspectDeformation > 0) {
+          newHeight = (width / aspectRatio).toInt()
+        } else {
+          newWidth = (height * aspectRatio).toInt()
+        }
+    }
+
+    super.onMeasure(
+      MeasureSpec.makeMeasureSpec(newWidth, MeasureSpec.EXACTLY),
+      MeasureSpec.makeMeasureSpec(newHeight, MeasureSpec.EXACTLY),
+    )
+  }
+
+  private companion object {
+    /** Below this the letterboxing is invisible, so it is not worth resizing. */
+    const val MAX_ASPECT_DEFORMATION = 0.01f
   }
 }

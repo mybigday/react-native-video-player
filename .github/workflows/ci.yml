@@ -1,18 +1,20 @@
 name: CI
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -26,8 +28,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -38,11 +39,10 @@ jobs:
   build-library:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup
         uses: ./.github/actions/setup
 
       - name: Build package
-        run: yarn prepack
+        run: yarn prepare

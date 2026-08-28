@@ -1,83 +1,106 @@
-name: CI iOS
+name: CI Apple
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'ios/**'
       - 'example/ios/**'
+      - 'example-tv/ios/**'
+      - 'example-legacy/ios/**'
+      - 'src/**'
       - '*.podspec'
-      - '.github/workflows/**'
+      - 'package.json'
+      - '.github/**'
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'ios/**'
       - 'example/ios/**'
+      - 'example-tv/ios/**'
+      - 'example-legacy/ios/**'
+      - 'src/**'
       - '*.podspec'
-      - '.github/workflows/**'
+      - 'package.json'
+      - '.github/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-ios:
+  build:
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # iPhone and iPad, on react-native.
+          - name: ios
+            workspace: example
+            package: '@fugood/react-native-video-player-example'
+            task: build:ios
+          # Apple TV, on react-native-tvos.
+          - name: tvos
+            workspace: example-tv
+            package: '@fugood/react-native-video-player-example-tv'
+            task: build:tvos
+          # The legacy (Paper) renderer, on the last React Native that supports
+          # it — RCT_NEW_ARCH_ENABLED=0 is a no-op from 0.82 onwards.
+          - name: ios-legacy
+            workspace: example-legacy
+            package: '@fugood/react-native-video-player-example-legacy'
+            task: build:ios-legacy
+    name: ${{ matrix.name }}
     env:
-      TURBO_CACHE_DIR: .turbo/ios
+      TURBO_CACHE_DIR: .turbo/${{ matrix.name }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Cache turborepo for iOS
-        uses: actions/cache@v3
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: ${{ matrix.workspace }}
+
+      - name: Cache turborepo
+        uses: actions/cache@v4
         with:
           path: ${{ env.TURBO_CACHE_DIR }}
-          key: ${{ runner.os }}-turborepo-ios-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-turborepo-${{ matrix.name }}-${{ hashFiles('yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-turborepo-ios-
+            ${{ runner.os }}-turborepo-${{ matrix.name }}-
 
-      - name: Check turborepo cache for iOS
-        run: |
-          TURBO_CACHE_STATUS=$(node -p "($(yarn --silent turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" --dry=json)).tasks.find(t => t.task === 'build:ios').cache.status")
-
-          if [[ $TURBO_CACHE_STATUS == "HIT" ]]; then
-            echo "turbo_cache_hit=1" >> $GITHUB_ENV
-          fi
-
-      - name: Cache cocoapods
-        if: env.turbo_cache_hit != 1
-        id: cocoapods-cache
-        uses: actions/cache@v3
+      # Exact-match only, no restore-keys: React Native keeps a prebuilt
+      # React.xcframework inside Pods/ and swaps its Debug/Release slice through
+      # a marker file that `pod install` will not re-check. Reusing a Pods
+      # directory resolved from a different Podfile can therefore link against a
+      # stale slice and fail with missing React-internal symbols.
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
         with:
-          path: |
-            **/ios/Pods
-          key: ${{ runner.os }}-cocoapods-${{ hashFiles('example/ios/Podfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cocoapods-
+          path: ${{ matrix.workspace }}/ios/Pods
+          key: ${{ runner.os }}-cocoapods-${{ matrix.name }}-${{ hashFiles('yarn.lock', '*.podspec', format('{0}/ios/Podfile', matrix.workspace)) }}
 
-      - name: Fix boost download URL
-        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
+      - name: Install pods
+        run: yarn workspace ${{ matrix.package }} pods
+
+      # `turbo run` exits 0 when a task name matches no workspace, which once
+      # let three Apple jobs pass green in five seconds having built nothing.
+      - name: Build
         run: |
-          # The JFrog artifactory URL for boost is broken/redirecting incorrectly
-          # Use the official archives.boost.io mirror instead
-          BOOST_PODSPEC="example/node_modules/react-native/third-party-podspecs/boost.podspec"
-          if [ -f "$BOOST_PODSPEC" ]; then
-            sed -i '' 's|boostorg.jfrog.io/artifactory/main/release|archives.boost.io/release|g' "$BOOST_PODSPEC"
+          set -o pipefail
+          yarn turbo run ${TASK} --filter="${PACKAGE}" \
+            --cache-dir="${TURBO_CACHE_DIR}" 2>&1 | tee turbo.log
+          if grep -q 'No tasks were executed' turbo.log; then
+            echo "::error::turbo matched no task for ${TASK} in ${PACKAGE}"
+            exit 1
           fi
-
-      - name: Install cocoapods
-        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
-        run: |
-          yarn example pods
         env:
-          NO_FLIPPER: 1
-
-      - name: Build example for iOS
-        run: |
-          yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
+          TASK: ${{ matrix.task }}
+          PACKAGE: ${{ matrix.package }}

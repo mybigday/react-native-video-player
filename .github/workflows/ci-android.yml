@@ -1,75 +1,99 @@
 name: CI Android
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'android/**'
       - 'example/android/**'
-      - '.github/workflows/**'
+      - 'example-tv/android/**'
+      - 'example-legacy/android/**'
+      - 'src/**'
+      - 'package.json'
+      - '.github/**'
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'android/**'
       - 'example/android/**'
-      - '.github/workflows/**'
+      - 'example-tv/android/**'
+      - 'example-legacy/android/**'
+      - 'src/**'
+      - 'package.json'
+      - '.github/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Phones and tablets, on react-native.
+          - name: android
+            package: '@fugood/react-native-video-player-example'
+            task: build:android
+          # Android TV, on react-native-tvos.
+          - name: android-tv
+            package: '@fugood/react-native-video-player-example-tv'
+            task: build:androidtv
+          # The legacy (Paper) renderer, on the last React Native that supports
+          # it — 0.82's Gradle plugin force-enables the New Architecture.
+          - name: android-legacy
+            package: '@fugood/react-native-video-player-example-legacy'
+            task: build:android-legacy
+    name: ${{ matrix.name }}
     env:
-      TURBO_CACHE_DIR: .turbo/android
+      TURBO_CACHE_DIR: .turbo/${{ matrix.name }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Cache turborepo for Android
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.TURBO_CACHE_DIR }}
-          key: ${{ runner.os }}-turborepo-android-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-turborepo-android-
-
-      - name: Check turborepo cache for Android
-        run: |
-          TURBO_CACHE_STATUS=$(node -p "($(yarn --silent turbo run build:android --cache-dir="${{ env.TURBO_CACHE_DIR }}" --dry=json)).tasks.find(t => t.task === 'build:android').cache.status")
-
-          if [[ $TURBO_CACHE_STATUS == "HIT" ]]; then
-            echo "turbo_cache_hit=1" >> $GITHUB_ENV
-          fi
-
       - name: Install JDK
-        if: env.turbo_cache_hit != 1
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: temurin
           java-version: '17'
 
-      - name: Finalize Android SDK
-        if: env.turbo_cache_hit != 1
-        run: |
-          /bin/bash -c "yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null"
+      - name: Cache turborepo
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TURBO_CACHE_DIR }}
+          key: ${{ runner.os }}-turborepo-${{ matrix.name }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-turborepo-${{ matrix.name }}-
 
       - name: Cache Gradle
-        if: env.turbo_cache_hit != 1
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/wrapper
             ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('example/android/gradle/wrapper/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/gradle-wrapper.properties', '**/*.gradle') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Build example for Android
+      - name: Finalize Android SDK
         run: |
-          yarn turbo run build:android --cache-dir="${{ env.TURBO_CACHE_DIR }}"
+          /bin/bash -c "yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null"
+
+      # `turbo run` exits 0 when a task name matches no workspace, which once
+      # let three Apple jobs pass green in five seconds having built nothing.
+      - name: Build
+        run: |
+          set -o pipefail
+          yarn turbo run ${TASK} --filter="${PACKAGE}" \
+            --cache-dir="${TURBO_CACHE_DIR}" 2>&1 | tee turbo.log
+          if grep -q 'No tasks were executed' turbo.log; then
+            echo "::error::turbo matched no task for ${TASK} in ${PACKAGE}"
+            exit 1
+          fi
+        env:
+          TASK: ${{ matrix.task }}
+          PACKAGE: ${{ matrix.package }}

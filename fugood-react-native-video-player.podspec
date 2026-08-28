@@ -1,7 +1,6 @@
 require "json"
 
 package = JSON.parse(File.read(File.join(__dir__, "package.json")))
-folly_compiler_flags = '-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -Wno-comma -Wno-shorten-64-to-32'
 
 Pod::Spec.new do |s|
   s.name         = "fugood-react-native-video-player"
@@ -11,32 +10,31 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  s.platforms    = { :ios => "9.0", :tvos => "9.0" }
-  s.source       = { :git => "https://github.com/mybigday//fugood-react-native-video-player.git", :tag => "#{s.version}" }
+  # `min_supported_versions` comes from React Native's CocoaPods helpers, which
+  # the app's Podfile has already loaded (available since react-native 0.71).
+  # It reports `{ ios: }` for react-native and `{ ios:, tvos: }` for
+  # react-native-tvos, so this pod follows whichever fork the app installs.
+  #
+  # Do not guard this with `respond_to?`: the helpers are top-level Ruby
+  # methods, which are *private* on Object, so `respond_to?` reports false and
+  # the pod would silently lose its tvOS platform — and with it, linkage into
+  # Apple TV apps.
+  s.platforms    = min_supported_versions
 
-  s.source_files = "ios/**/*.{h,m,mm}"
+  s.source       = {
+    :git => "https://github.com/mybigday/react-native-video-player.git",
+    :tag => "v#{s.version}"
+  }
 
-  # Use install_modules_dependencies helper to install the dependencies if React Native version >=0.71.0.
-  # See https://github.com/facebook/react-native/blob/febf6b7f33fdb4904669f99d795eba4c0f95d7bf/scripts/cocoapods/new_architecture.rb#L79.
-  if respond_to?(:install_modules_dependencies, true)
-    install_modules_dependencies(s)
-  else
-  s.dependency "React-Core"
+  s.source_files         = "ios/**/*.{h,m,mm}"
+  s.private_header_files = "ios/**/*.h"
+  s.frameworks           = "AVFoundation", "CoreMedia"
 
-  # Don't install the dependencies when we run `pod install` in the old architecture.
-  if ENV['RCT_NEW_ARCH_ENABLED'] == '1' then
-    s.compiler_flags = folly_compiler_flags + " -DRCT_NEW_ARCH_ENABLED=1"
-    s.pod_target_xcconfig    = {
-        "HEADER_SEARCH_PATHS" => "\"$(PODS_ROOT)/boost\"",
-        "OTHER_CPLUSPLUSFLAGS" => "-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1",
-        "CLANG_CXX_LANGUAGE_STANDARD" => "c++17"
-    }
-    s.dependency "React-RCTFabric"
-    s.dependency "React-Codegen"
-    s.dependency "RCT-Folly"
-    s.dependency "RCTRequired"
-    s.dependency "RCTTypeSafety"
-    s.dependency "ReactCommon/turbomodule/core"
-   end
-  end    
+  s.resource_bundles = {
+    "fugood-react-native-video-player-privacy" => ["ios/PrivacyInfo.xcprivacy"]
+  }
+
+  # Wires up the React Native dependencies (and defines RCT_NEW_ARCH_ENABLED on
+  # the new architecture). Available since react-native 0.71.
+  install_modules_dependencies(s)
 end

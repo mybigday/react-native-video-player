@@ -1,27 +1,34 @@
 {
-  "name": "ReactNativeVideoPlayerExample",
+  "name": "@fugood/react-native-video-player-example",
   "version": "0.0.1",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "start": "react-native start",
-    "pods": "pod-install --quiet"
+    "pods": "bundle exec pod install --project-directory=ios",
+    "build:android": "cd android && ./gradlew assembleDebug --no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a",
+    "build:ios": "cd ios && xcodebuild -workspace ReactNativeVideoPlayerExample.xcworkspace -scheme ReactNativeVideoPlayerExample -configuration Debug -sdk iphonesimulator -destination \"generic/platform=iOS Simulator\" CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ GCC_OPTIMIZATION_LEVEL=0 GCC_PRECOMPILE_PREFIX_HEADER=YES ASSETCATALOG_COMPILER_OPTIMIZATION=time DEBUG_INFORMATION_FORMAT=dwarf COMPILER_INDEX_STORE_ENABLE=NO"
   },
   "dependencies": {
-    "react": "18.2.0",
-    "react-native": "0.72.4"
+    "react": "19.2.3",
+    "react-native": "0.87.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0",
-    "@babel/preset-env": "^7.20.0",
-    "@babel/runtime": "^7.20.0",
-    "@react-native/eslint-config": "^0.72.2",
-    "@react-native/metro-config": "^0.72.11",
-    "metro-react-native-babel-preset": "0.76.8",
-    "babel-plugin-module-resolver": "^5.0.0"
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.3",
+    "@babel/runtime": "^7.25.0",
+    "@react-native-community/cli": "20.2.0",
+    "@react-native-community/cli-platform-android": "20.2.0",
+    "@react-native-community/cli-platform-ios": "20.2.0",
+    "@react-native/babel-preset": "0.87.1",
+    "@react-native/metro-config": "0.87.1",
+    "@react-native/typescript-config": "0.87.1",
+    "@types/react": "^19.2.0",
+    "react-native-builder-bob": "^0.43.0",
+    "react-native-monorepo-config": "^0.4.0"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">= 22.11.0"
   }
 }
