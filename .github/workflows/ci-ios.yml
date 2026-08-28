@@ -90,5 +90,17 @@ jobs:
       - name: Install pods
         run: yarn workspace ${{ matrix.package }} pods
 
+      # `turbo run` exits 0 when a task name matches no workspace, which once
+      # let three Apple jobs pass green in five seconds having built nothing.
       - name: Build
-        run: yarn turbo run ${{ matrix.task }} --cache-dir="${{ env.TURBO_CACHE_DIR }}"
+        run: |
+          set -o pipefail
+          yarn turbo run ${TASK} --filter="${PACKAGE}" \
+            --cache-dir="${TURBO_CACHE_DIR}" 2>&1 | tee turbo.log
+          if grep -q 'No tasks were executed' turbo.log; then
+            echo "::error::turbo matched no task for ${TASK} in ${PACKAGE}"
+            exit 1
+          fi
+        env:
+          TASK: ${{ matrix.task }}
+          PACKAGE: ${{ matrix.package }}

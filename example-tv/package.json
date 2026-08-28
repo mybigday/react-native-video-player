@@ -7,7 +7,8 @@
     "tvos": "react-native run-tvos",
     "start": "react-native start",
     "pods": "bundle exec pod install --project-directory=ios",
-    "build:androidtv": "cd android && ./gradlew assembleDebug --no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a"
+    "build:androidtv": "cd android && ./gradlew assembleDebug --no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a",
+    "build:tvos": "cd ios && xcodebuild -workspace ReactNativeVideoPlayerExampleTV.xcworkspace -scheme ReactNativeVideoPlayerExampleTV -configuration Debug -sdk appletvsimulator -destination \"generic/platform=tvOS Simulator\" CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ GCC_OPTIMIZATION_LEVEL=0 GCC_PRECOMPILE_PREFIX_HEADER=YES ASSETCATALOG_COMPILER_OPTIMIZATION=time DEBUG_INFORMATION_FORMAT=dwarf COMPILER_INDEX_STORE_ENABLE=NO"
   },
   "dependencies": {
     "react": "19.2.3",

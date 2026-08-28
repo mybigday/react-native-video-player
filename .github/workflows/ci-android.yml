@@ -35,13 +35,16 @@ jobs:
         include:
           # Phones and tablets, on react-native.
           - name: android
+            package: '@fugood/react-native-video-player-example'
             task: build:android
           # Android TV, on react-native-tvos.
           - name: android-tv
+            package: '@fugood/react-native-video-player-example-tv'
             task: build:androidtv
           # The legacy (Paper) renderer, on the last React Native that supports
           # it — 0.82's Gradle plugin force-enables the New Architecture.
           - name: android-legacy
+            package: '@fugood/react-native-video-player-example-legacy'
             task: build:android-legacy
     name: ${{ matrix.name }}
     env:
@@ -80,5 +83,17 @@ jobs:
         run: |
           /bin/bash -c "yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null"
 
+      # `turbo run` exits 0 when a task name matches no workspace, which once
+      # let three Apple jobs pass green in five seconds having built nothing.
       - name: Build
-        run: yarn turbo run ${{ matrix.task }} --cache-dir="${{ env.TURBO_CACHE_DIR }}"
+        run: |
+          set -o pipefail
+          yarn turbo run ${TASK} --filter="${PACKAGE}" \
+            --cache-dir="${TURBO_CACHE_DIR}" 2>&1 | tee turbo.log
+          if grep -q 'No tasks were executed' turbo.log; then
+            echo "::error::turbo matched no task for ${TASK} in ${PACKAGE}"
+            exit 1
+          fi
+        env:
+          TASK: ${{ matrix.task }}
+          PACKAGE: ${{ matrix.package }}

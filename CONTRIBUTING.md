@@ -117,7 +117,7 @@ The `package.json` file contains various scripts for common tasks:
 - `yarn prepare`: build the publishable package with `react-native-builder-bob`.
 - `yarn clean`: remove all build folders.
 - `yarn example <script>` / `yarn example-tv <script>`: run a script in an example workspace.
-- `yarn build:android` / `yarn build:ios` / `yarn build:androidtv` / `yarn build:tvos`: the compile-only builds CI runs.
+- `yarn turbo run build:android` (and `build:ios`, `build:androidtv`, `build:tvos`, `build:android-legacy`, `build:ios-legacy`): the compile-only builds CI runs. Each task name is owned by exactly one example workspace — `turbo run` fans a name out across every workspace, so a duplicated name would start two Gradle builds at once. That matters because React Native's autolinking requires the library's Gradle output to stay at `android/build`, which every example shares; **do not build two examples concurrently**.
 
 ### Sending a pull request
 

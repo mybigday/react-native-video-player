@@ -44,14 +44,8 @@
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build example-tv/android/build example-tv/android/app/build example-tv/ios/build example-legacy/android/build example-legacy/android/app/build example-legacy/ios/build lib",
     "prepare": "bob build",
     "release": "release-it --only-version",
-    "build:android": "cd example/android && ./gradlew assembleDebug --no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a",
-    "build:ios": "cd example/ios && xcodebuild -workspace ReactNativeVideoPlayerExample.xcworkspace -scheme ReactNativeVideoPlayerExample -configuration Debug -sdk iphonesimulator CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ GCC_OPTIMIZATION_LEVEL=0 GCC_PRECOMPILE_PREFIX_HEADER=YES ASSETCATALOG_COMPILER_OPTIMIZATION=time DEBUG_INFORMATION_FORMAT=dwarf COMPILER_INDEX_STORE_ENABLE=NO",
-    "build:tvos": "cd example-tv/ios && xcodebuild -workspace ReactNativeVideoPlayerExampleTV.xcworkspace -scheme ReactNativeVideoPlayerExampleTV -configuration Debug -sdk appletvsimulator CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ GCC_OPTIMIZATION_LEVEL=0 GCC_PRECOMPILE_PREFIX_HEADER=YES ASSETCATALOG_COMPILER_OPTIMIZATION=time DEBUG_INFORMATION_FORMAT=dwarf COMPILER_INDEX_STORE_ENABLE=NO",
     "example-tv": "yarn workspace @fugood/react-native-video-player-example-tv",
-    "build:androidtv": "cd example-tv/android && ./gradlew assembleDebug --no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a",
-    "example-legacy": "yarn workspace @fugood/react-native-video-player-example-legacy",
-    "build:android-legacy": "cd example-legacy/android && ./gradlew assembleDebug --no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a",
-    "build:ios-legacy": "cd example-legacy/ios && xcodebuild -workspace ReactNativeVideoPlayerExampleLegacy.xcworkspace -scheme ReactNativeVideoPlayerExampleLegacy -configuration Debug -sdk iphonesimulator CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ GCC_OPTIMIZATION_LEVEL=0 GCC_PRECOMPILE_PREFIX_HEADER=YES ASSETCATALOG_COMPILER_OPTIMIZATION=time DEBUG_INFORMATION_FORMAT=dwarf COMPILER_INDEX_STORE_ENABLE=NO"
+    "example-legacy": "yarn workspace @fugood/react-native-video-player-example-legacy"
   },
   "keywords": [
     "react-native",
