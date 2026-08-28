@@ -12,56 +12,45 @@ To get started with the project, run `yarn` in the root directory to install the
 yarn
 ```
 
-> While it's possible to use [`npm`](https://github.com/npm/cli), the tooling is built around [`yarn`](https://classic.yarnpkg.com/), so you'll have an easier time if you use `yarn` for development.
+This is a Yarn 4 workspace, managed through [Corepack](https://nodejs.org/api/corepack.html) — the `packageManager` field in `package.json` pins the exact version, so `yarn` uses the right release without a global install. Node 22 or newer is required (see `.nvmrc`).
 
-While developing, you can run the [example app](/example/) to test your changes. Any changes you make in your library's JavaScript code will be reflected in the example app without a rebuild. If you change any native code, then you'll need to rebuild the example app.
+### The two example apps
 
-To start the packager:
+React Native's CocoaPods setup only supports one platform per app, so Apple TV cannot live in the same project as iPhone. There are therefore two examples:
+
+| Workspace | React Native | Architecture | Platforms |
+| --- | --- | --- | --- |
+| [`example/`](/example/) | `react-native` 0.87 | New (Fabric) | iOS, Android |
+| [`example-tv/`](/example-tv/) | `react-native-tvos` 0.87 | New (Fabric) | tvOS, Android TV |
+| [`example-legacy/`](/example-legacy/) | `react-native` 0.81 | Legacy (Paper) | iOS, Android |
+
+All three render the same screen — `example-tv/src/App.tsx` and `example-legacy/src/App.tsx` re-export `example/src/App.tsx` — so a change to the demo shows up everywhere.
+
+`example-legacy` is pinned to 0.81 on purpose: React Native 0.82's Gradle plugin force-enables the New Architecture and logs an error for `newArchEnabled=false`, so 0.81 is the last release in which the legacy renderer can be built at all. It is the only coverage the `android/src/oldarch/` source set and the `#ifndef RCT_NEW_ARCH_ENABLED` half of `ios/` get.
+
+Changes to the library's JavaScript are picked up without a rebuild; native changes need a rebuild.
 
 ```sh
-yarn example start
-```
-
-To run the example app on Android:
-
-```sh
+yarn example start          # Metro, for the mobile example
 yarn example android
+yarn example ios            # run `yarn example pods` first
+
+yarn example-tv start       # Metro, for the TV example
+yarn example-tv android     # Android TV emulator
+yarn example-tv tvos        # Apple TV simulator, after `yarn example-tv pods`
+
+yarn example-legacy start   # Metro, for the legacy-renderer example
+yarn example-legacy android
+yarn example-legacy ios     # run `yarn example-legacy pods` first
 ```
 
-To run the example app on iOS:
+`yarn example-legacy pods` sets `RCT_NEW_ARCH_ENABLED=0`, and `example-legacy/android/gradle.properties` sets `newArchEnabled=false`; both are what select the legacy code paths.
 
-```sh
-yarn example ios
-```
-
-By default, the example is configured to build with the old architecture. To run the example with the new architecture, you can do the following:
-
-1. For Android, run:
-
-   ```sh
-   ORG_GRADLE_PROJECT_newArchEnabled=true yarn example android
-   ```
-
-2. For iOS, run:
-
-   ```sh
-   RCT_NEW_ARCH_ENABLED=1 yarn example pods
-   yarn example ios
-   ```
-
-If you are building for a different architecture than your previous build, make sure to remove the build folders first. You can run the following command to cleanup all build folders:
+If you are switching architectures or React Native versions, clear the build folders first:
 
 ```sh
 yarn clean
 ```
-
-To confirm that the app is running with the new architecture, you can check the Metro logs for a message like this:
-
-```sh
-Running "ReactNativeVideoPlayerExample" with {"fabric":true,"initialProps":{"concurrentRoot":true},"rootTag":1}
-```
-
-Note the `"fabric":true` and `"concurrentRoot":true` properties.
 
 Make sure your code passes TypeScript and ESLint. Run the following to verify:
 
@@ -82,9 +71,9 @@ Remember to add tests for your change if possible. Run the unit tests by:
 yarn test
 ```
 
-To edit the Objective-C or Swift files, open `example/ios/ReactNativeVideoPlayerExample.xcworkspace` in XCode and find the source files at `Pods > Development Pods > @fugood/react-native-video-player`.
+To edit the Objective-C files, open `example/ios/ReactNativeVideoPlayerExample.xcworkspace` in Xcode and find the sources under `Pods > Development Pods > fugood-react-native-video-player`.
 
-To edit the Java or Kotlin files, open `example/android` in Android studio and find the source files at `fugood-react-native-video-player` under `Android`.
+To edit the Kotlin files, open `example/android` in Android Studio and find the sources under `fugood-react-native-video-player`.
 
 
 ### Commit message convention
@@ -122,13 +111,13 @@ yarn release
 
 The `package.json` file contains various scripts for common tasks:
 
-- `yarn bootstrap`: setup project by installing all dependencies and pods.
 - `yarn typecheck`: type-check files with TypeScript.
 - `yarn lint`: lint files with ESLint.
 - `yarn test`: run unit tests with Jest.
-- `yarn example start`: start the Metro server for the example app.
-- `yarn example android`: run the example app on Android.
-- `yarn example ios`: run the example app on iOS.
+- `yarn prepare`: build the publishable package with `react-native-builder-bob`.
+- `yarn clean`: remove all build folders.
+- `yarn example <script>` / `yarn example-tv <script>`: run a script in an example workspace.
+- `yarn build:android` / `yarn build:ios` / `yarn build:androidtv` / `yarn build:tvos`: the compile-only builds CI runs.
 
 ### Sending a pull request
 

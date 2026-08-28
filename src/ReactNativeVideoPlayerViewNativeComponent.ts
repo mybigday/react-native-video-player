@@ -1,13 +1,13 @@
 import type * as React from 'react';
-import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
-import codegenNativeCommands from 'react-native/Libraries/Utilities/codegenNativeCommands';
+import { codegenNativeComponent } from 'react-native';
+import { codegenNativeCommands } from 'react-native';
 import type { ViewProps, HostComponent } from 'react-native';
 import type {
   DirectEventHandler,
   Int32,
   Float,
-  // @ts-ignore
   UnsafeMixed,
+  WithDefault,
 } from 'react-native/Libraries/Types/CodegenTypes';
 
 export type ProgressEvent = Readonly<{
@@ -23,20 +23,26 @@ export type BufferingEvent = Readonly<{
   isBuffering: boolean;
 }>;
 
-export interface VideoPlayerProps extends ViewProps {
+export interface NativeVideoPlayerProps extends ViewProps {
   source?: {
     uri?: string;
+    /**
+     * Extra HTTP headers sent with the request. Typed as `UnsafeMixed` because
+     * codegen has no representation for a string map; the native side reads it
+     * as a dictionary of string values.
+     */
     headers?: UnsafeMixed;
   };
-  loop?: boolean;
-  paused?: boolean;
-  muted?: boolean;
-  volume?: Float;
+  loop?: WithDefault<boolean, false>;
+  paused?: WithDefault<boolean, false>;
+  muted?: WithDefault<boolean, false>;
+  volume?: WithDefault<Float, 1.0>;
   seek?: Float;
-  resizeMode?: string;
-  speed?: Float;
-  progressUpdateInterval?: Int32;
-  useTextureView?: boolean;
+  resizeMode?: WithDefault<string, 'contain'>;
+  speed?: WithDefault<Float, 1.0>;
+  progressUpdateInterval?: WithDefault<Int32, 250>;
+  /** Android only. Renders into a TextureView instead of a SurfaceView. */
+  useTextureView?: WithDefault<boolean, false>;
 
   onBuffer?: DirectEventHandler<BufferingEvent>;
   onReadyForDisplay?: DirectEventHandler<null>;
@@ -46,7 +52,7 @@ export interface VideoPlayerProps extends ViewProps {
   onError?: DirectEventHandler<ErrorEvent>;
 }
 
-type ComponentType = HostComponent<VideoPlayerProps>;
+type ComponentType = HostComponent<NativeVideoPlayerProps>;
 
 interface NativeCommands {
   seek: (viewRef: React.ElementRef<ComponentType>, position: Float) => void;
@@ -59,6 +65,6 @@ export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
   supportedCommands: ['seek', 'play', 'pause', 'stop'],
 });
 
-export default codegenNativeComponent<VideoPlayerProps>(
+export default codegenNativeComponent<NativeVideoPlayerProps>(
   'ReactNativeVideoPlayerView'
 );

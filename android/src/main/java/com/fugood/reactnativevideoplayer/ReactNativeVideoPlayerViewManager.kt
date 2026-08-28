@@ -1,32 +1,32 @@
 package com.fugood.reactnativevideoplayer
 
-import android.graphics.Color
-import com.facebook.react.module.annotations.ReactModule
-import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableArray
-import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
 
 @ReactModule(name = ReactNativeVideoPlayerViewManager.NAME)
 class ReactNativeVideoPlayerViewManager :
   ReactNativeVideoPlayerViewManagerSpec<ReactNativeVideoPlayerView>() {
+
   override fun getName() = NAME
 
   public override fun createViewInstance(context: ThemedReactContext) =
     ReactNativeVideoPlayerView(context)
 
-  public override fun onDropViewInstance(view: ReactNativeVideoPlayerView) {
+  override fun onDropViewInstance(view: ReactNativeVideoPlayerView) {
     super.onDropViewInstance(view)
     view.release()
   }
 
   @ReactProp(name = "source")
   override fun setSource(view: ReactNativeVideoPlayerView, value: ReadableMap?) {
-    view.setSource(
-      value?.getString("uri"),
-      value?.getMap("headers")?.toHashMap()?.mapValues { it.value.toString() }
-    )
+    val headers =
+      value?.getMap("headers")?.toHashMap()?.entries?.mapNotNull { (key, headerValue) ->
+        headerValue?.let { key to it.toString() }
+      }?.toMap()
+    view.setSource(value?.getString("uri"), headers)
   }
 
   @ReactProp(name = "loop")
@@ -34,7 +34,7 @@ class ReactNativeVideoPlayerViewManager :
     view.setLoop(value)
   }
 
-  @ReactProp(name = "volume")
+  @ReactProp(name = "volume", defaultFloat = 1.0f)
   override fun setVolume(view: ReactNativeVideoPlayerView, value: Float) {
     view.setVolume(value)
   }
@@ -59,12 +59,12 @@ class ReactNativeVideoPlayerViewManager :
     view.setResizeMode(value)
   }
 
-  @ReactProp(name = "speed")
+  @ReactProp(name = "speed", defaultFloat = 1.0f)
   override fun setSpeed(view: ReactNativeVideoPlayerView, value: Float) {
     view.setSpeed(value)
   }
 
-  @ReactProp(name = "progressUpdateInterval")
+  @ReactProp(name = "progressUpdateInterval", defaultInt = 250)
   override fun setProgressUpdateInterval(view: ReactNativeVideoPlayerView, value: Int) {
     view.setProgressUpdateInterval(value)
   }
@@ -90,7 +90,11 @@ class ReactNativeVideoPlayerViewManager :
     view.stop()
   }
 
-  override fun receiveCommand(view: ReactNativeVideoPlayerView, commandId: String, args: ReadableArray?) {
+  override fun receiveCommand(
+    view: ReactNativeVideoPlayerView,
+    commandId: String,
+    args: ReadableArray?,
+  ) {
     when (commandId) {
       "seek" -> seek(view, (args?.getDouble(0) ?: 0.0).toFloat())
       "play" -> play(view)
@@ -100,7 +104,13 @@ class ReactNativeVideoPlayerViewManager :
     }
   }
 
-  override fun receiveCommand(view: ReactNativeVideoPlayerView, commandId: Int, args: ReadableArray?) {
+  /** Legacy integer command dispatch, still used by older React Native releases. */
+  @Deprecated("Superseded by the String overload", ReplaceWith("receiveCommand(view, commandId, args)"))
+  override fun receiveCommand(
+    view: ReactNativeVideoPlayerView,
+    commandId: Int,
+    args: ReadableArray?,
+  ) {
     when (commandId) {
       COMMAND_SEEK -> seek(view, (args?.getDouble(0) ?: 0.0).toFloat())
       COMMAND_PLAY -> play(view)
@@ -110,25 +120,23 @@ class ReactNativeVideoPlayerViewManager :
     }
   }
 
-  override fun getCommandsMap(): Map<String, Int> {
-    return mutableMapOf(
+  override fun getCommandsMap(): Map<String, Int> =
+    mapOf(
       "seek" to COMMAND_SEEK,
       "play" to COMMAND_PLAY,
       "pause" to COMMAND_PAUSE,
-      "stop" to COMMAND_STOP
+      "stop" to COMMAND_STOP,
     )
-  }
 
-  override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> {
-    return mutableMapOf(
-      ReactVideoBufferEvent.EVENT_NAME to mutableMapOf("registrationName" to "onBuffer"),
-      ReactVideoReadyEvent.EVENT_NAME to mutableMapOf("registrationName" to "onReadyForDisplay"),
-      ReactVideoLoadEvent.EVENT_NAME to mutableMapOf("registrationName" to "onLoad"),
-      ReactVideoProgressEvent.EVENT_NAME to mutableMapOf("registrationName" to "onProgress"),
-      ReactVideoEndEvent.EVENT_NAME to mutableMapOf("registrationName" to "onEnd"),
-      ReactVideoErrorEvent.EVENT_NAME to mutableMapOf("registrationName" to "onError"),
+  override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> =
+    mapOf(
+      ReactVideoBufferEvent.EVENT_NAME to mapOf("registrationName" to "onBuffer"),
+      ReactVideoReadyEvent.EVENT_NAME to mapOf("registrationName" to "onReadyForDisplay"),
+      ReactVideoLoadEvent.EVENT_NAME to mapOf("registrationName" to "onLoad"),
+      ReactVideoProgressEvent.EVENT_NAME to mapOf("registrationName" to "onProgress"),
+      ReactVideoEndEvent.EVENT_NAME to mapOf("registrationName" to "onEnd"),
+      ReactVideoErrorEvent.EVENT_NAME to mapOf("registrationName" to "onError"),
     )
-  }
 
   companion object {
     const val NAME = "ReactNativeVideoPlayerView"

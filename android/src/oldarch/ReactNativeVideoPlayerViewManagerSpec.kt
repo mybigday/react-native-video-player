@@ -2,9 +2,12 @@ package com.fugood.reactnativevideoplayer
 
 import android.view.View
 import com.facebook.react.bridge.ReadableMap
-import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.SimpleViewManager
 
+/**
+ * Hand-written stand-in for the codegen'd delegate interface, so the concrete
+ * view manager can have one shape on both architectures.
+ */
 abstract class ReactNativeVideoPlayerViewManagerSpec<T : View> : SimpleViewManager<T>() {
   abstract fun setSource(view: T, value: ReadableMap?)
   abstract fun setLoop(view: T, value: Boolean)
@@ -16,7 +19,8 @@ abstract class ReactNativeVideoPlayerViewManagerSpec<T : View> : SimpleViewManag
   abstract fun setSpeed(view: T, value: Float)
   abstract fun setProgressUpdateInterval(view: T, value: Int)
   abstract fun setUseTextureView(view: T, value: Boolean)
-  // commands
+
+  // Commands
   abstract fun seek(view: T, value: Float)
   abstract fun play(view: T)
   abstract fun pause(view: T)
