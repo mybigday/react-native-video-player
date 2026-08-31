@@ -39,6 +39,11 @@ export type VideoPlayerProps = ViewProps & {
   source?: VideoPlayerSource;
   /** Restart automatically when playback reaches the end. */
   loop?: boolean;
+  /**
+   * Pauses playback without unloading the media. A view mounted with `paused`
+   * set still renders the first frame rather than staying blank, so it doubles
+   * as a poster.
+   */
   paused?: boolean;
   muted?: boolean;
   /** `0.0` – `1.0`. Defaults to `1.0`. */

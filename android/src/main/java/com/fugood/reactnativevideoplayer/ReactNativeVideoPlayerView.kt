@@ -87,6 +87,13 @@ constructor(
   private var playbackSuspended = false
   /** Seek requested before the player could accept one, in ms. `-1` for none. */
   private var pendingSeekMs = -1L
+  /**
+   * Whether `onReadyForDisplay` has been emitted for the current source. A
+   * frame can reach the surface two ways — playback starting, or a seek
+   * completing on a player that was never started — and the event is
+   * documented as the moment the first frame is ready, so it fires once.
+   */
+  private var didEmitReadyForDisplay = false
 
   // Props
   private var uri: String? = null
@@ -253,8 +260,14 @@ constructor(
     val mp = player
     if (mp != null && state != State.IDLE && state != State.ERROR) {
       // The player survived; hand it the new surface back.
-      if (attachSurface(mp) && playbackSuspended) {
-        resumeAfterSuspend(mp)
+      if (attachSurface(mp)) {
+        if (playbackSuspended) {
+          resumeAfterSuspend(mp)
+        } else {
+          // A fresh surface is blank, and a player that is not running will
+          // not fill it on its own.
+          renderCurrentFrame(mp)
+        }
       }
     } else {
       preparePlayer()
@@ -274,6 +287,7 @@ constructor(
     // is the only state `setDataSource` accepts.
     val mp = player?.also { it.reset() } ?: MediaPlayer().also { player = it }
     state = State.IDLE
+    didEmitReadyForDisplay = false
 
     if (!attachSurface(mp)) {
       return
@@ -357,6 +371,9 @@ constructor(
   private fun resumeAfterSuspend(mp: MediaPlayer) {
     playbackSuspended = false
     if (paused) {
+      // `paused` was set while we were suspended, so playback stays down — but
+      // the surface still needs a frame drawn on it.
+      renderCurrentFrame(mp)
       return
     }
     if (resumePositionMs > 0 && canStartOrSeek()) {
@@ -409,6 +426,27 @@ constructor(
         mp.seekTo(positionMs.toInt())
       }
     }
+  }
+
+  /**
+   * Puts a frame on the surface without starting playback.
+   *
+   * `MediaPlayer` only pushes frames while it is started, so a player parked in
+   * Prepared draws nothing at all and a view mounted with `paused` set stays
+   * blank. `AVPlayerLayer` paints the current frame as soon as its item is
+   * ready to play, so the same JS shows a still frame on iOS — this is what
+   * keeps the two platforms agreeing. Completing a seek is the one way to get a
+   * frame out of a player that has never run, and Prepared is a state `seekTo`
+   * accepts.
+   *
+   * A source with no duration is live: there is no frame to seek back to, and
+   * seeking a live stream only costs a rebuffer.
+   */
+  private fun renderCurrentFrame(mp: MediaPlayer) {
+    if (state == State.STARTED || !canStartOrSeek() || durationMs() <= 0L) {
+      return
+    }
+    seekPlayerTo(mp, currentPositionMs())
   }
 
   private fun startPlayback() {
@@ -653,9 +691,13 @@ constructor(
 
     if (!paused) {
       startPlayback()
+    } else if (seekTarget <= 0) {
+      // When `paused` is set we deliberately leave the player in Prepared
+      // rather than starting and pausing it; `canPause()` knows not to touch
+      // it. It still owes the surface a frame, unless the seek above already
+      // produced one.
+      renderCurrentFrame(mp)
     }
-    // When `paused` is set we deliberately leave the player in Prepared rather
-    // than starting and pausing it; `canPause()` knows not to touch it.
   }
 
   override fun onCompletion(mp: MediaPlayer) {
@@ -705,10 +747,7 @@ constructor(
         emitEvent(ReactVideoBufferEvent(surfaceId, id, false))
       MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
         // "The player just pushed the very first video frame for rendering."
-        // Stop drawing the SurfaceView on top so it composites normally with
-        // the rest of the React tree.
-        (videoView as? SurfaceView)?.setZOrderOnTop(false)
-        emitEvent(ReactVideoReadyEvent(surfaceId, id))
+        onFrameRendered()
         emitProgress()
       }
     }
@@ -716,7 +755,27 @@ constructor(
   }
 
   override fun onSeekComplete(mp: MediaPlayer) {
+    if (state == State.PREPARED) {
+      // Prepared and never started, so this seek is the only thing that can
+      // have drawn anything — the frame it landed on is now on screen.
+      onFrameRendered()
+    }
     emitProgress()
+  }
+
+  /**
+   * A frame has reached the surface. The `SurfaceView` is created drawing on
+   * top so the window background does not flash through before there is
+   * anything to show; from here on it composites normally with the rest of the
+   * React tree, which every overlay drawn over the video depends on.
+   */
+  private fun onFrameRendered() {
+    (videoView as? SurfaceView)?.setZOrderOnTop(false)
+    if (didEmitReadyForDisplay) {
+      return
+    }
+    didEmitReadyForDisplay = true
+    emitEvent(ReactVideoReadyEvent(surfaceId, id))
   }
 
   override fun onVideoSizeChanged(mp: MediaPlayer, width: Int, height: Int) {

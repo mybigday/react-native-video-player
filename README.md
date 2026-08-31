@@ -63,7 +63,7 @@ All [`View` props](https://reactnative.dev/docs/view#props) are supported, plus:
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `source` | `{ uri?: string; headers?: Record<string, string> }` | – | Remote URL, or an absolute file path (a leading `/` is read as a local file). `headers` is ignored for local files. |
-| `paused` | `boolean` | `false` | Pauses playback without unloading the media. |
+| `paused` | `boolean` | `false` | Pauses playback without unloading the media. A view mounted with `paused` set still renders the first frame, so it doubles as a poster. |
 | `muted` | `boolean` | `false` | |
 | `volume` | `number` | `1.0` | `0.0` – `1.0`. Independent of `muted`. |
 | `loop` | `boolean` | `false` | Restarts on reaching the end; `onEnd` does not fire while looping. |
